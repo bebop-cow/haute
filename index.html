@@ -1,0 +1,857 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Haute Sewing School</title>
+<meta name="description" content="A free, hands-on game that teaches you to sew — from threading a needle to finishing your own dress.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#e9e7e3; --ink:#1d2027; --muted:#6b6e76; --coral:#d9665a; --coral-soft:rgba(217,102,90,.13);
+  --card:rgba(255,255,255,.74); --line:rgba(29,32,39,.1); --ok:#3f9b6b;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:"Inter Tight",system-ui,-apple-system,sans-serif;overflow:hidden;-webkit-font-smoothing:antialiased}
+canvas{position:fixed;inset:0;display:block;touch-action:none;cursor:default}
+#hud{position:fixed;left:0;right:0;top:0;padding:14px 16px 0;pointer-events:none;z-index:2}
+#hud .wrap{max-width:720px;margin:0 auto}
+.row{display:flex;align-items:center;gap:8px}
+.spacer{flex:1}
+.pill{pointer-events:auto;border:0;background:rgba(255,255,255,.6);color:var(--ink);font:500 13px/1 inherit;font-family:inherit;padding:9px 13px;border-radius:999px;cursor:pointer;box-shadow:0 1px 0 rgba(255,255,255,.8) inset,0 1px 3px rgba(0,0,0,.06);transition:background .15s}
+.pill:hover{background:#fff}
+.pill.icon{width:34px;height:34px;padding:0;display:grid;place-items:center}
+#dots{display:flex;gap:4px;pointer-events:auto}
+#dots i{width:14px;height:5px;border-radius:3px;background:rgba(29,32,39,.12);display:block}
+#dots i.done{background:var(--coral)}
+#dots i.cur{background:var(--ink)}
+#kicker{margin:16px 0 4px;font-size:13px;font-weight:500;color:var(--muted)}
+#kicker b{color:var(--ink);font-weight:600}
+h1{margin:0;font-size:clamp(24px,4.4vw,36px);line-height:1.08;letter-spacing:-.025em;font-weight:700}
+h1 em{font-style:normal;color:var(--coral);background:var(--coral-soft);border-radius:7px;padding:0 .14em;margin:0 -.04em}
+#panel{position:fixed;left:50%;bottom:max(14px,env(safe-area-inset-bottom));transform:translateX(-50%);width:min(560px,calc(100% - 32px));background:var(--card);backdrop-filter:blur(14px) saturate(1.2);-webkit-backdrop-filter:blur(14px) saturate(1.2);border-radius:20px;padding:13px;z-index:2;box-shadow:0 10px 30px rgba(40,30,20,.09),0 1px 0 rgba(255,255,255,.9) inset}
+#msg{margin:2px 4px 11px;font-size:14px;line-height:1.45;color:#474a52}
+#msg b{color:var(--ink);font-weight:600}
+#extra{margin:0 2px 10px}
+.btns{display:flex;gap:8px}
+.btns button{flex:1;height:46px;border-radius:14px;border:0;font:600 15px inherit;font-family:inherit;cursor:pointer;transition:transform .08s,opacity .2s,background .2s}
+.btns button:active{transform:scale(.98)}
+#b1{background:var(--coral);color:#fff;box-shadow:0 6px 14px rgba(217,102,90,.28)}
+#b1:disabled{background:rgba(29,32,39,.1);color:rgba(29,32,39,.38);box-shadow:none;cursor:default}
+#b2{background:transparent;color:var(--ink);border:1px solid var(--line);flex:.55}
+button[hidden]{display:none}
+.swatches{display:flex;gap:8px;flex-wrap:wrap}
+.sw{pointer-events:auto;width:40px;height:40px;border-radius:12px;border:3px solid #fff;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.15);position:relative}
+.sw.on{outline:2px solid var(--ink);outline-offset:1px}
+.swlabel{font-size:12.5px;color:var(--muted);margin-top:6px}
+#modal{position:fixed;inset:0;background:rgba(233,231,227,.6);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:grid;place-items:center;z-index:5;padding:16px}
+#modal[hidden]{display:none}
+#modal .card{background:#fbfaf8;border-radius:22px;max-width:520px;width:100%;max-height:calc(100vh - 32px);overflow:auto;padding:22px;box-shadow:0 20px 50px rgba(40,30,20,.18)}
+#modal h2{margin:0 0 6px;font-size:24px;letter-spacing:-.02em}
+#modal h3{margin:18px 0 6px;font-size:15px}
+#modal p,#modal li{font-size:14px;line-height:1.5;color:#474a52}
+#modal ol,#modal ul{padding-left:20px;margin:6px 0}
+#modal .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}
+#modal label{font-size:12.5px;color:var(--muted);display:block}
+#modal input[type=number]{width:100%;font:600 17px inherit;font-family:inherit;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:#fff;margin-top:4px}
+#modal .seg{display:inline-flex;background:rgba(29,32,39,.07);border-radius:10px;padding:3px}
+#modal .seg button{border:0;background:transparent;font:600 13px inherit;font-family:inherit;padding:6px 12px;border-radius:8px;cursor:pointer}
+#modal .seg button.on{background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+#modal .actions{display:flex;gap:8px;margin-top:16px}
+#modal .actions button{flex:1;height:44px;border-radius:13px;border:1px solid var(--line);background:transparent;font:600 14.5px inherit;font-family:inherit;cursor:pointer}
+#modal .actions button.primary{background:var(--coral);color:#fff;border:0}
+#modal table{width:100%;border-collapse:collapse;font-size:14px;margin:8px 0}
+#modal td{padding:7px 4px;border-bottom:1px solid var(--line)}
+#modal td:last-child{text-align:right;font-weight:600;font-variant-numeric:tabular-nums}
+.tag{display:inline-block;font-size:11.5px;font-weight:600;color:var(--coral);background:var(--coral-soft);padding:3px 8px;border-radius:99px;margin-bottom:8px}
+@media (max-width:520px){#kicker{margin-top:12px}#msg{font-size:13.5px}}
+@media print{
+  body{background:#fff;overflow:visible}
+  canvas,#hud,#panel{display:none!important}
+  #modal{position:static;background:none;backdrop-filter:none;display:block;padding:0}
+  #modal .card{box-shadow:none;max-height:none;max-width:none}
+  #modal .actions{display:none}
+}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<header id="hud"><div class="wrap">
+  <div class="row">
+    <button class="pill" id="back">← Chapters</button>
+    <div class="spacer"></div>
+    <div id="dots"></div>
+    <button class="pill icon" id="snd" title="Sound" aria-label="Toggle sound"></button>
+  </div>
+  <div id="kicker"></div>
+  <h1 id="title"></h1>
+</div></header>
+<section id="panel">
+  <p id="msg"></p>
+  <div id="extra" hidden></div>
+  <div class="btns"><button id="b2"></button><button id="b1"></button></div>
+</section>
+<div id="modal" hidden></div>
+
+<script>
+(()=>{
+'use strict';
+// ───────────────────────── constants & state
+const W=1000,H=640;
+const CORAL='#d9665a', INK='#1d2027', THREAD='#c2338f', TAPE='#f0c445', BG='#e9e7e3';
+const DEF={done:{},m:{bust:92,waist:76,hip:100,length:95,arm:60,outseam:104},fab:{},cuts:{},sound:true};
+let state=load();
+function load(){let s=null;try{s=JSON.parse(localStorage.getItem('haute.v2'));}catch(e){}
+  if(!s){try{const o=JSON.parse(localStorage.getItem('haute.v1'));if(o){s={done:{},m:o.m,fab:{},cuts:{},sound:o.sound};for(const k in(o.done||{})){const i=+k;s.done[i<4?'b'+i:'shift.'+(i-4)]=true;}if(o.fabric)s.fab.shift=o.fabric;if(o.piece)s.cuts['shift.front']=o.piece;}}catch(e){}}
+  s=s||{};const d=JSON.parse(JSON.stringify(DEF));return{...d,...s,m:{...d.m,...(s.m||{})},done:s.done||{},fab:s.fab||{},cuts:s.cuts||{}};}
+function save(){try{localStorage.setItem('haute.v2',JSON.stringify(state));}catch(e){}}
+
+// ───────────────────────── dom
+const $=id=>document.getElementById(id);
+const cv=$('c'),ctx=cv.getContext('2d');
+const hud=$('hud'),panel=$('panel'),$kicker=$('kicker'),$title=$('title'),$msg=$('msg'),$extra=$('extra'),$b1=$('b1'),$b2=$('b2'),$modal=$('modal'),$dots=$('dots'),$snd=$('snd');
+let DPR=1,cw=0,ch=0;const view={s:1,ox:0,oy:0};
+function resize(){DPR=Math.min(2,window.devicePixelRatio||1);cw=innerWidth;ch=innerHeight;cv.width=Math.round(cw*DPR);cv.height=Math.round(ch*DPR);cv.style.width=cw+'px';cv.style.height=ch+'px';}
+let cam=null,portrait=false;
+function layoutStage(snap){const top=hud.getBoundingClientRect().bottom+4;const bot=panel.getBoundingClientRect().top-4;const ah=Math.max(160,bot-top),aw=cw-24;portrait=aw/ah<1;const b=(typeof scene!=='undefined'&&scene&&scene.bounds&&scene.bounds())||{x:0,y:0,w:W,h:H};if(!cam||snap)cam={...b};else for(const k of['x','y','w','h'])cam[k]=lerp(cam[k],b[k],.12);const s=Math.min(aw/cam.w,ah/cam.h);view.s=s;view.ox=(cw-cam.w*s)/2-cam.x*s;view.oy=top+(ah-cam.h*s)/2-cam.y*s;}
+const GR=n=>Math.max(n,22/Math.max(view.s,.05));
+addEventListener('resize',resize);resize();
+
+// ───────────────────────── math
+const lerp=(a,b,t)=>a+(b-a)*t,clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+const ease=t=>1-Math.pow(1-clamp(t,0,1),3),easeIO=t=>{t=clamp(t,0,1);return t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2};
+const P=(x,y)=>({x,y});
+function segInt(p1,p2,p3,p4){const d=(p2.x-p1.x)*(p4.y-p3.y)-(p2.y-p1.y)*(p4.x-p3.x);if(Math.abs(d)<1e-9)return null;const t=((p3.x-p1.x)*(p4.y-p3.y)-(p3.y-p1.y)*(p4.x-p3.x))/d;const u=((p3.x-p1.x)*(p2.y-p1.y)-(p3.y-p1.y)*(p2.x-p1.x))/d;if(t>=0&&t<=1&&u>=0&&u<=1){const ax=p2.x-p1.x,ay=p2.y-p1.y,bx=p4.x-p3.x,by=p4.y-p3.y;return{t,u,x:p1.x+t*ax,y:p1.y+t*ay,cross:ax*by-ay*bx,dot:ax*bx+ay*by};}return null;}
+function distSeg(p,a,b){const dx=b.x-a.x,dy=b.y-a.y,l=dx*dx+dy*dy||1;const t=clamp(((p.x-a.x)*dx+(p.y-a.y)*dy)/l,0,1);return Math.hypot(p.x-a.x-t*dx,p.y-a.y-t*dy);}
+function distPoly(p,pts){let m=1e9;for(let i=0;i<pts.length-1;i++)m=Math.min(m,distSeg(p,pts[i],pts[i+1]));return m;}
+function quad(a,c,b,t){const u=1-t;return P(u*u*a.x+2*u*t*c.x+t*t*b.x,u*u*a.y+2*u*t*c.y+t*t*b.y);}
+function sampleQuad(a,c,b,n){const r=[];for(let i=0;i<=n;i++)r.push(quad(a,c,b,i/n));return r;}
+function inPoly(p,poly){let c=false;for(let i=0,j=poly.length-1;i<poly.length;j=i++){const a=poly[i],b=poly[j];if((a.y>p.y)!==(b.y>p.y)&&p.x<(b.x-a.x)*(p.y-a.y)/(b.y-a.y)+a.x)c=!c;}return c;}
+function centroid(poly){let x=0,y=0;poly.forEach(p=>{x+=p.x;y+=p.y});return P(x/poly.length,y/poly.length);}
+function rot(p,a){const c=Math.cos(a),s=Math.sin(a);return P(p.x*c-p.y*s,p.x*s+p.y*c);}
+function hex2rgb(h){if(h.startsWith('rgb'))return h.match(/[\d.]+/g).slice(0,3).map(Number);h=h.replace('#','');return[parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)];}
+function shade(h,t){const c=hex2rgb(h),to=t<0?0:255,k=Math.abs(t);return`rgb(${c.map(v=>Math.round(v+(to-v)*k)).join(',')})`;}
+function rgba(h,a){const c=hex2rgb(h);return`rgba(${c.join(',')},${a})`;}
+
+// ───────────────────────── audio
+let AC=null;
+function ac(){if(!state.sound)return null;if(!AC){try{AC=new(window.AudioContext||window.webkitAudioContext)();}catch(e){return null;}}if(AC.state==='suspended')AC.resume();return AC;}
+function noiseBuf(a){const b=a.createBuffer(1,a.sampleRate*.12,a.sampleRate),d=b.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,3);return b;}
+let NB=null;
+function snip(v=.5){const a=ac();if(!a)return;NB=NB||noiseBuf(a);const s=a.createBufferSource();s.buffer=NB;const f=a.createBiquadFilter();f.type='bandpass';f.frequency.value=3200+Math.random()*1800;f.Q.value=1.4;const g=a.createGain();g.gain.value=v;s.connect(f);f.connect(g);g.connect(a.destination);s.start();}
+function tone(fr=880,d=.06,v=.08,type='triangle',delay=0){const a=ac();if(!a)return;const o=a.createOscillator(),g=a.createGain(),t=a.currentTime+delay;o.type=type;o.frequency.setValueAtTime(fr,t);g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(v,t+.008);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g);g.connect(a.destination);o.start(t);o.stop(t+d+.02);}
+const tick=()=>tone(1400+Math.random()*200,.04,.05);
+const pop=()=>{tone(520,.08,.07,'sine');tone(780,.06,.04,'sine',.03)};
+const bad=()=>{tone(210,.14,.07,'sine');tone(170,.16,.05,'sine',.06)};
+const chime=()=>{[660,880,1320].forEach((f,i)=>tone(f,.4,.06,'sine',i*.09))};
+function sndIcon(){$snd.innerHTML=state.sound?'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg>':'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M17 9l5 6M22 9l-5 6"/></svg>';}
+$snd.onclick=()=>{state.sound=!state.sound;save();sndIcon();};sndIcon();
+
+// ───────────────────────── drawing helpers
+const k=()=>DPR*view.s;
+function shadow(b,oy,a){ctx.shadowColor=`rgba(45,32,20,${a})`;ctx.shadowBlur=b*k();ctx.shadowOffsetY=oy*k();ctx.shadowOffsetX=0;}
+function noShadow(){ctx.shadowColor='transparent';ctx.shadowBlur=0;ctx.shadowOffsetY=0;}
+function path(pts,close=true){ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));if(close)ctx.closePath();}
+function smooth(pts){ctx.beginPath();ctx.moveTo(pts[0].x,pts[0].y);if(pts.length<3){pts.slice(1).forEach(p=>ctx.lineTo(p.x,p.y));return;}for(let i=1;i<pts.length-1;i++){const m=P((pts[i].x+pts[i+1].x)/2,(pts[i].y+pts[i+1].y)/2);ctx.quadraticCurveTo(pts[i].x,pts[i].y,m.x,m.y);}const l=pts[pts.length-1];ctx.lineTo(l.x,l.y);}
+function rr(x,y,w,h,r){ctx.beginPath();ctx.roundRect?ctx.roundRect(x,y,w,h,r):ctx.rect(x,y,w,h);}
+function font(sz,w=600){ctx.font=`${w} ${sz}px "Inter Tight",system-ui,sans-serif`;}
+function cable(pts,color,w=4.5,alpha=1){if(pts.length<2)return;ctx.save();ctx.globalAlpha=alpha;ctx.lineCap='round';ctx.lineJoin='round';smooth(pts);shadow(5,3,.2*alpha);ctx.strokeStyle=shade(color,-.3);ctx.lineWidth=w;ctx.stroke();noShadow();smooth(pts);ctx.strokeStyle=color;ctx.lineWidth=w*.62;ctx.stroke();ctx.translate(0,-w*.16);smooth(pts);ctx.strokeStyle='rgba(255,255,255,.5)';ctx.lineWidth=w*.2;ctx.stroke();ctx.restore();}
+// noise texture for bg / metal
+const noiseCv=document.createElement('canvas');noiseCv.width=noiseCv.height=160;{const g=noiseCv.getContext('2d'),d=g.createImageData(160,160);for(let i=0;i<d.data.length;i+=4){const v=Math.random()*255;d.data[i]=d.data[i+1]=d.data[i+2]=v;d.data[i+3]=10;}g.putImageData(d,0,0);}
+let noisePat=null;
+const brushCv=document.createElement('canvas');brushCv.width=1000;brushCv.height=60;{const g=brushCv.getContext('2d');for(let i=0;i<900;i++){g.fillStyle=`rgba(${Math.random()<.5?'255,255,255':'0,0,0'},${Math.random()*.05})`;const x=Math.random()*1000,y=Math.random()*60,w=40+Math.random()*160;g.fillRect(x,y,w,.7);if(x+w>1000)g.fillRect(x-1000,y,w,.7);}}
+let brushPat=null;
+const weaveCache={};
+function weave(hex){if(weaveCache[hex])return weaveCache[hex];const c=document.createElement('canvas');c.width=c.height=36;const g=c.getContext('2d');g.fillStyle=hex;g.fillRect(0,0,36,36);const cc=hex2rgb(hex),lt=(.299*cc[0]+.587*cc[1]+.114*cc[2])/255>.7?.35:1;for(let i=0;i<36;i+=2){g.fillStyle=`rgba(255,255,255,${.03+Math.random()*.06})`;g.fillRect(0,i,36,1);g.fillStyle=`rgba(0,0,0,${(.03+Math.random()*.06)*lt})`;g.fillRect(i,0,1,36);}for(let i=0;i<40;i++){g.fillStyle=`rgba(${Math.random()<.5?'255,255,255':'0,0,0'},.08)`;g.fillRect(Math.random()*36,Math.random()*36,1.4,1);}const p=ctx.createPattern(c,'repeat');weaveCache[hex]=p;return p;}
+function cloth(poly,hex,o={}){const th=o.thick??3;ctx.save();ctx.globalAlpha=o.alpha??1;if(o.shadow!==false){path(poly);shadow(o.sb??18,o.so??9,.2);ctx.fillStyle=shade(hex,-.3);ctx.fill();noShadow();}if(th){ctx.save();ctx.translate(0,th);path(poly);ctx.fillStyle=shade(hex,-.32);ctx.fill();ctx.restore();}path(poly);ctx.fillStyle=weave(hex);ctx.fill();ctx.restore();}
+function metal(x,y,w,h,r,o={}){ctx.save();rr(x,y,w,h,r);shadow(o.sb??16,o.so??8,o.sa??.26);const g=ctx.createLinearGradient(x,y,x,y+h);g.addColorStop(0,'#f6f6f5');g.addColorStop(1,'#d3d3d1');ctx.fillStyle=g;ctx.fill();noShadow();brushPat=brushPat||ctx.createPattern(brushCv,'repeat');ctx.save();rr(x,y,w,h,r);ctx.clip();ctx.fillStyle=brushPat;ctx.fillRect(x,y,w,h);ctx.restore();rr(x+.5,y+.5,w-1,h-1,r);ctx.strokeStyle='rgba(255,255,255,.9)';ctx.lineWidth=1;ctx.stroke();rr(x,y,w,h,r);ctx.strokeStyle='rgba(0,0,0,.07)';ctx.stroke();ctx.restore();}
+function dot(p,r,fill,stroke,lw=2){ctx.beginPath();ctx.arc(p.x,p.y,r,0,7);if(fill){ctx.fillStyle=fill;ctx.fill();}if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=lw;ctx.stroke();}}
+function handle(p,on){ctx.save();shadow(5,2,.25);dot(p,on?8:7,CORAL);noShadow();dot(p,on?8:7,null,'#fff',2.4);ctx.restore();}
+function midHandle(p){ctx.save();shadow(4,2,.2);dot(p,6.5,'#fff');noShadow();dot(p,6.5,null,CORAL,2.2);ctx.restore();}
+function dashed(pts,color=CORAL,w=2,dash=[7,6]){ctx.save();ctx.setLineDash(dash);ctx.lineCap='round';path(pts,false);ctx.strokeStyle=color;ctx.lineWidth=w;ctx.stroke();ctx.restore();}
+function chalk(pts,w=2,col='rgba(255,255,255,.88)'){ctx.save();ctx.setLineDash([5,4]);ctx.lineCap='round';path(pts,false);ctx.strokeStyle=col;ctx.lineWidth=w;ctx.stroke();ctx.restore();}
+function pillText(x,y,text,bg='#fff',fg=INK,sz=13){font(sz,600);const w=ctx.measureText(text).width+16;ctx.save();shadow(6,2,.15);rr(x-w/2,y-12,w,24,12);ctx.fillStyle=bg;ctx.fill();noShadow();ctx.fillStyle=fg;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(text,x,y+.5);ctx.restore();}
+function ring(p,t,r=14,color=CORAL){const a=(t*1.4)%1;ctx.save();ctx.globalAlpha=1-a;dot(p,r*.6+r*a,null,color,2.2);ctx.restore();ctx.save();ctx.globalAlpha=.9;dot(p,4,color);ctx.restore();}
+function drawNeedle(T,ang,len=150,alpha=1,wd=1){const d=P(Math.cos(ang),Math.sin(ang)),n=P(-d.y*wd,d.x*wd);const E=P(T.x+d.x*len,T.y+d.y*len),M=P(T.x+d.x*len*.4,T.y+d.y*len*.4);ctx.save();ctx.globalAlpha=alpha;shadow(6,4,.28*alpha);ctx.beginPath();ctx.moveTo(T.x,T.y);ctx.lineTo(M.x+n.x*2.5,M.y+n.y*2.5);ctx.lineTo(E.x+n.x*3.4,E.y+n.y*3.4);ctx.arc(E.x,E.y,3.4*wd,ang+Math.PI/2,ang-Math.PI/2,true);ctx.lineTo(M.x-n.x*2.5,M.y-n.y*2.5);ctx.closePath();const g=ctx.createLinearGradient(M.x+n.x*4,M.y+n.y*4,M.x-n.x*4,M.y-n.y*4);g.addColorStop(0,'#fbfbfb');g.addColorStop(.45,'#c9cacd');g.addColorStop(1,'#85868b');ctx.fillStyle=g;ctx.fill();noShadow();const Ec=P(E.x-d.x*9*wd,E.y-d.y*9*wd);ctx.beginPath();ctx.moveTo(Ec.x-d.x*5*wd,Ec.y-d.y*5*wd);ctx.lineTo(Ec.x+d.x*4*wd,Ec.y+d.y*4*wd);ctx.lineCap='round';ctx.lineWidth=2.1*wd;ctx.strokeStyle='rgba(50,48,58,.6)';ctx.stroke();ctx.restore();return Ec;}
+function drawScissors(x,y,ang,open,sc=1.25){ctx.save();ctx.translate(x,y);ctx.rotate(ang);ctx.scale(sc,sc);ctx.translate(-14,0);shadow(7,5,.28);for(const s of[1,-1]){ctx.save();ctx.rotate(s*open/2);ctx.beginPath();ctx.moveTo(-4,0);ctx.lineTo(32,s*.4);ctx.quadraticCurveTo(14,s*6.5,-4,s*4.5);ctx.closePath();const g=ctx.createLinearGradient(0,0,0,s*6);g.addColorStop(0,'#f6f6f6');g.addColorStop(1,'#a9aaae');ctx.fillStyle=g;ctx.fill();ctx.lineCap='round';ctx.strokeStyle=CORAL;ctx.lineWidth=4.2;ctx.beginPath();ctx.moveTo(-2,-s*1.5);ctx.quadraticCurveTo(-10,-s*4,-17,-s*9);ctx.stroke();ctx.beginPath();ctx.arc(-24,-s*11.5,7.2,0,7);ctx.stroke();ctx.restore();}noShadow();dot(P(0,0),2.2,'#8d8e93');ctx.restore();}
+function drawPin(p,ang=-.6,t=1,head=CORAL){ctx.save();ctx.translate(p.x,p.y-(1-ease(t))*30);ctx.globalAlpha=clamp(t*2,0,1);ctx.rotate(ang);shadow(3,2,.25);ctx.strokeStyle='#b9babd';ctx.lineWidth=1.4;ctx.beginPath();ctx.moveTo(-14,0);ctx.lineTo(14,0);ctx.stroke();dot(P(-15,0),4.2,head);noShadow();dot(P(-16.2,-1.2),1.3,'rgba(255,255,255,.7)');ctx.restore();}
+function slit(pts){ctx.save();ctx.lineCap='round';ctx.lineJoin='round';path(pts,false);ctx.strokeStyle='rgba(22,18,28,.7)';ctx.lineWidth=1.8;ctx.stroke();ctx.translate(0,1.1);path(pts,false);ctx.strokeStyle='rgba(255,255,255,.22)';ctx.lineWidth=1;ctx.stroke();ctx.restore();}
+
+// ───────────────────────── rope (verlet cable)
+class Rope{
+  constructor(a,b,n,len,o={}){this.nodes=[];this.n=n;this.seg=len/(n-1);this.g=o.g??0;this.damp=o.damp??.92;this.color=o.color||THREAD;this.w=o.w||4.5;const dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1,nx=-dy/L,ny=dx/L;for(let i=0;i<n;i++){const t=i/(n-1),wv=(o.wave||0)*Math.sin(t*Math.PI*(o.waves||3));const x=a.x+dx*t+nx*wv,y=a.y+dy*t+ny*wv;this.nodes.push({x,y,px:x,py:y,pin:false});}}
+  static from(pts,o={}){const r=Object.create(Rope.prototype);r.nodes=pts.map(p=>({x:p.x,y:p.y,px:p.x,py:p.y,pin:false}));r.n=r.nodes.length;let L=0;for(let i=1;i<r.n;i++)L+=dist(r.nodes[i],r.nodes[i-1]);r.seg=L/Math.max(1,r.n-1);r.g=o.g??0;r.damp=o.damp??.9;r.color=o.color||THREAD;r.w=o.w||4.5;return r;}
+  get last(){return this.nodes[this.n-1];}
+  get length(){return this.seg*(this.n-1);}
+  step(){const N=this.nodes;for(const p of N){if(p.pin){p.px=p.x;p.py=p.y;continue;}const vx=(p.x-p.px)*this.damp,vy=(p.y-p.py)*this.damp;p.px=p.x;p.py=p.y;p.x+=vx;p.y+=vy+this.g;}
+    for(let k=0;k<16;k++)for(let i=0;i<this.n-1;i++){const a=N[i],b=N[i+1];if(a.pin&&b.pin)continue;const dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy)||1e-6,df=(d-this.seg)/d;const wa=a.pin?0:b.pin?1:.5,wb=b.pin?0:a.pin?1:.5;a.x+=dx*df*wa;a.y+=dy*df*wa;b.x-=dx*df*wb;b.y-=dy*df*wb;}}
+  draw(alpha=1){cable(this.nodes,this.color,this.w,alpha);}
+}
+
+// ───────────────────────── scissors cutter (Pondo-style)
+class Cutter{
+  constructor(pts,onDone,onProg,speed=360){this.pts=pts;this.cum=[0];for(let i=1;i<pts.length;i++)this.cum.push(this.cum[i-1]+dist(pts[i],pts[i-1]));this.L=this.cum[this.cum.length-1]||1;this.d=0;this.onDone=onDone;this.onProg=onProg;this.speed=speed;this.next=0;this.hold=.25;}
+  update(dt){if(this.d<this.L){this.d=Math.min(this.L,this.d+this.speed*dt);if(this.d>=this.next){snip();this.next+=30;}this.onProg&&this.onProg(this.d);}else{this.hold-=dt;if(this.hold<=0&&!this.called){this.called=true;this.onDone&&this.onDone();}}}
+  at(d){let i=1;while(i<this.cum.length-1&&this.cum[i]<d)i++;const a=this.pts[i-1],b=this.pts[i],sg=(this.cum[i]-this.cum[i-1])||1,t=clamp((d-this.cum[i-1])/sg,0,1);return{x:lerp(a.x,b.x,t),y:lerp(a.y,b.y,t),ang:Math.atan2(b.y-a.y,b.x-a.x)};}
+  done(){return this.called;}
+  drawSlit(){const pts=[];for(let i=0;i<this.pts.length;i++)if(this.cum[i]<=this.d)pts.push(this.pts[i]);pts.push(this.at(this.d));if(pts.length>1)slit(pts);}
+  drawTool(){const p=this.at(this.d);const open=this.d>=this.L?.05:.1+.42*Math.abs(Math.sin(this.d/30*Math.PI));ctx.save();ctx.globalAlpha=this.d>=this.L?clamp(this.hold*4,0,1):1;drawScissors(p.x,p.y,p.ang,open);ctx.restore();}
+}
+
+// ───────────────────────── fx: floaters & confetti
+const floats=[],bits=[];
+function float(x,y,text,color=INK){floats.push({x,y,text,color,t:0});}
+function burst(x,y,n=36){const cols=[CORAL,THREAD,TAPE,'#7a3fd1','#3f9b6b'];for(let i=0;i<n;i++){const a=Math.random()*Math.PI*2,s=3+Math.random()*6;bits.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-4,r:Math.random()*6,vr:(Math.random()-.5)*.4,c:cols[i%cols.length],t:0,l:10+Math.random()*10});}}
+function updFx(dt){floats.forEach(f=>{f.t+=dt;f.y-=22*dt;});for(let i=floats.length-1;i>=0;i--)if(floats[i].t>1.8)floats.splice(i,1);bits.forEach(b=>{b.t+=dt;b.vy+=.22;b.vx*=.985;b.x+=b.vx;b.y+=b.vy;b.r+=b.vr;});for(let i=bits.length-1;i>=0;i--)if(bits[i].t>2.4)bits.splice(i,1);}
+function drawFx(){bits.forEach(b=>{ctx.save();ctx.globalAlpha=clamp(2.4-b.t,0,1);ctx.translate(b.x,b.y);ctx.rotate(b.r);ctx.strokeStyle=b.c;ctx.lineWidth=3.2;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(-b.l/2,0);ctx.lineTo(b.l/2,0);ctx.stroke();ctx.restore();});floats.forEach(f=>{ctx.save();ctx.globalAlpha=clamp(1.8-f.t,0,1)*clamp(f.t*6,0,1);pillText(f.x,f.y,f.text,'#fff',f.color);ctx.restore();});}
+
+// ───────────────────────── ui
+function ui(o){$kicker.innerHTML=o.kicker??'';$title.innerHTML=o.title??'';$msg.innerHTML=o.msg??'';$extra.innerHTML='';if(o.extra){if(typeof o.extra==='string')$extra.innerHTML=o.extra;else $extra.appendChild(o.extra);}$extra.hidden=!o.extra;btn($b1,o.b1);btn($b2,o.b2);dots();}
+function btn(el,b){if(!b){el.hidden=true;return;}el.hidden=false;el.textContent=b.label;el.disabled=!!b.disabled;el.onclick=()=>{if(el.disabled)return;ac();tick();b.fn&&b.fn();};}
+const setMsg=h=>{$msg.innerHTML=h;},setTitle=h=>{$title.innerHTML=h;},b1On=v=>{$b1.disabled=!v;};
+// ───────────────────────── fabrics & projects
+const FAB={
+  dress:[{n:'Indigo cotton',c:'#3e5486'},{n:'Terracotta linen',c:'#b5583f'},{n:'Sage cotton',c:'#7b9278'},{n:'Mustard linen',c:'#c79330'},{n:'Plum',c:'#6b3a5c'}],
+  shirt:[{n:'White poplin',c:'#f1efe9'},{n:'Blue oxford',c:'#a7bfd8'},{n:'Ecru linen',c:'#e2d3bb'},{n:'Olive cotton',c:'#7a8a62'},{n:'Navy chambray',c:'#3a4a68'}],
+  denim:[{n:'Indigo denim',c:'#34507b'},{n:'Raw dark denim',c:'#222c40'},{n:'Light wash',c:'#7d9cc0'},{n:'Black denim',c:'#2c2c2e'},{n:'Tan canvas',c:'#b89c70'}],
+  suit:[{n:'Charcoal wool',c:'#40444d'},{n:'Navy wool',c:'#2b3652'},{n:'Tan linen',c:'#b79b72'},{n:'Olive tweed',c:'#626d4f'},{n:'Oxblood',c:'#6e3434'}]};
+const GOLD='#d8a43f';
+const S_=(name,sub,make)=>({name,sub,make});
+const BASICS=[{name:'Thread & knot',sub:'Cut, thread, tie',make:ThreadScene},{name:'Running stitch',sub:'In, out, in, out',make:RunningScene},{name:'Backstitch',sub:'The strong seam',make:BackScene},{name:'Measure',sub:'Bust, waist, hips',make:MeasureScene}];
+const PROJ=[
+ {id:'shift',fab:'dress',name:'Shift dress',level:'Beginner',sub:'Sleeveless & simple',title:'A simple <em>shift dress</em>.',desc:'One pattern piece, cut on the fold — the perfect first garment.',learn:'grain, cutting, seams, pressing and hems.',doneTitle:'You made a <em>dress</em>.',doneMsg:'Cut to your measurements, sewn with your own stitches. Try another colour, then grab the pattern card to make it for real.',
+  steps:[S_('Pattern & grain','Lay it on the fold',()=>LayoutScene('shift','front')),S_('Cut it out','Measure twice, cut once',()=>CutScene('shift','front')),S_('Sew the seams','Shoulders & sides',()=>SeamsScene('shift')),S_('Hem it','Fold, fold, stitch',()=>HemScene('shift')),S_('Wear it','Your finished dress',()=>FinalScene('shift'))]},
+ {id:'sundress',fab:'dress',name:'Sundress',level:'Beginner+',sub:'Bodice + gathered skirt',title:'A gathered <em>sundress</em>.',desc:'A neat bodice with narrow straps and a full, twirly skirt made from simple rectangles.',learn:'cutting rectangles, gathering, and joining a skirt to a bodice.',doneTitle:'Your <em>sundress</em> twirls.',doneMsg:'Gathering turned a plain rectangle into a full skirt. Close the back with a zip, buttons or a tie — or cut the bodice a little looser and simply pull it on.',
+  steps:[S_('Pattern & grain','Bodice on the fold',()=>LayoutScene('sundress','bodice')),S_('Cut the bodice','Curves & straps',()=>CutScene('sundress','bodice')),S_('Cut the skirt','Just straight lines',()=>CutScene('sundress','skirt')),S_('Gather & join','Pull it in, stitch it on',()=>GatherScene('sundress')),S_('Hem it','Fold, fold, stitch',()=>HemScene('sundress')),S_('Wear it','Twirl test',()=>FinalScene('sundress'))]},
+ {id:'darted',fab:'dress',name:'Fitted dress',level:'Intermediate',sub:'Shaped with darts',title:'A <em>fitted</em> dress.',desc:'Follows the body through the waist. Darts — small stitched folds — turn flat fabric into a 3D shape.',learn:'curved side seams, darts and fitting.',doneTitle:'A dress that <em>fits</em>.',doneMsg:'The darts and curved side seams shape it to your waist. A zip in the back seam makes it easy to get on.',
+  steps:[S_('Pattern & grain','Lay it on the fold',()=>LayoutScene('darted','front')),S_('Cut it out','Curved side seams',()=>CutScene('darted','front')),S_('Sew the darts','Flat → 3D',()=>DartScene('darted')),S_('Sew the seams','Shoulders & sides',()=>SeamsScene('darted')),S_('Hem it','Fold, fold, stitch',()=>HemScene('darted')),S_('Wear it','Your fitted dress',()=>FinalScene('darted'))]},
+ {id:'shirt',fab:'shirt',name:'Button-up shirt',level:'Intermediate',sub:'Sleeves & buttons',title:'A <em>button-up</em> shirt.',desc:'A relaxed shirt with set-in sleeves and a button front. Works for anyone — just enter chest instead of bust.',learn:'cutting mirror pairs, setting sleeves, buttonholes and sewing buttons.',doneTitle:'Your <em>shirt</em> is done.',doneMsg:'Sleeves, buttons and a neat narrow hem. Add the collar strip from the pattern card for a finished neckline.',cardNote:'Negative “across” values sit left of the centre-front line — that’s the button overlap. Back: cut 1 on the fold, same as the front without the overlap and with a 2.5 cm neck. Collar: a strip (neck measurement + 3) × 9 cm, folded in half.',
+  steps:[S_('Pattern & grain','A pair, not a fold',()=>LayoutScene('shirt','front')),S_('Cut the fronts','Left & right',()=>CutScene('shirt','front')),S_('Cut the sleeves','On the fold',()=>CutScene('shirt','sleeve')),S_('Set the sleeves','Match the notches',()=>SleeveScene('shirt')),S_('Side seams','Armpit to hem',()=>SeamsScene('shirt')),S_('Buttonholes','Space, stitch, cut',()=>ButtonholeScene('shirt')),S_('Buttons','Cross & shank',()=>ButtonScene('shirt')),S_('Hem it','Narrow & neat',()=>HemScene('shirt')),S_('Wear it','Your finished shirt',()=>FinalScene('shirt'))]},
+ {id:'jeans',fab:'denim',name:'Jeans',level:'Advanced',sub:'Denim, topstitching, fly',title:'A pair of <em>jeans</em>.',desc:'Classic five-pocket-style jeans with tough flat-felled seams and gold topstitching. Denim is thick — use a heavy needle and a thimble.',learn:'trouser cutting, patch pockets, flat-felled seams, fly topstitching and waistbands.',doneTitle:'You made <em>jeans</em>.',doneMsg:'Flat-felled seams, topstitching, a fly and a button — the hardest everyday garment there is. Hammer the bulky seams flat; it really helps.',cardNote:'Back leg: trace the front leg, extend the crotch point 4 cm, raise the back waist 3 cm at the centre and add 1.5 cm at the side seam. Waistband: (waist + 4) × 8 cm. Fly facing: 5 × 20 cm. Use an 18 cm zip.',
+  steps:[S_('Pattern & grain','Leg on the grain',()=>LayoutScene('jeans','front')),S_('Cut the legs','Crotch curve',()=>CutScene('jeans','front')),S_('Back pockets','Place & topstitch',()=>PocketScene('jeans')),S_('Flat-felled seams','Trim, fold, stitch',()=>FellScene('jeans')),S_('Fly zip','The J-curve',()=>FlyScene('jeans')),S_('Waist button','Strong shank',()=>ButtonScene('jeans')),S_('Hem it','Gold topstitch',()=>HemScene('jeans')),S_('Wear it','Your finished jeans',()=>FinalScene('jeans'))]},
+ {id:'suit',fab:'suit',name:'Suit',level:'Advanced',sub:'Jacket + trousers',title:'A <em>suit</em>.',desc:'An unlined jacket with notched lapels, and matching trousers. Tailoring is mostly pressing and patience.',learn:'lapels, interfacing, darts, sleeves, pressing roll lines and creases.',doneTitle:'You made a <em>suit</em>.',doneMsg:'An unlined jacket with real lapels, plus trousers with a sharp crease. Full tailoring adds a lining and canvas — your next adventure.',cardNote:'Jacket back: cut 1 on the fold, like the shirt back but 2 cm wider at the shoulder. Collar: a curved strip, 9 cm deep, cut double with interfacing. Trousers: cut like the jeans leg (included below) but sew plain pressed seams.',
+  steps:[S_('Pattern & grain','Jacket front',()=>LayoutScene('suit','front')),S_('Cut the jacket','Notched lapel',()=>CutScene('suit','front')),S_('Interfacing','Fuse the front',()=>InterfacingScene('suit')),S_('Darts','Shape the waist',()=>DartScene('suit')),S_('Set the sleeves','Match the notches',()=>SleeveScene('suit')),S_('Roll the lapel','Press the roll line',()=>LapelScene('suit')),S_('Buttonholes','Space, stitch, cut',()=>ButtonholeScene('suit')),S_('Buttons','Cross & shank',()=>ButtonScene('suit')),S_('Trouser crease','A sharp press',()=>CreaseScene('suit')),S_('Wear it','Your finished suit',()=>FinalScene('suit'))]}];
+const projOf=id=>PROJ.find(p=>p.id===id);
+const fabList=id=>FAB[(projOf(id)||{}).fab||'dress'];
+const fabOf=id=>state.fab[id]||fabList(id)[0].c;
+const projProg=id=>projOf(id).steps.filter((s,i)=>state.done[id+'.'+i]).length;
+function lum(hex){const c=hex2rgb(hex);return(.299*c[0]+.587*c[1]+.114*c[2])/255;}
+function chalkCol(hex){return lum(hex)>.6?'rgba(40,90,170,.75)':'rgba(255,255,255,.88)';}
+function swatches(id){const list=fabList(id);const w=document.createElement('div');const row=document.createElement('div');row.className='swatches';const lab=document.createElement('div');lab.className='swlabel';const paint=()=>{const cur=fabOf(id);row.querySelectorAll('.sw').forEach(b=>b.classList.toggle('on',b.dataset.c===cur));const f=list.find(f=>f.c===cur);lab.textContent=f?f.n:'';};list.forEach(f=>{const b=document.createElement('button');b.className='sw';b.style.background=f.c;b.dataset.c=f.c;b.title=f.n;b.setAttribute('aria-label',f.n);b.onclick=()=>{state.fab[id]=f.c;save();tick();paint();};row.appendChild(b);});w.appendChild(row);w.appendChild(lab);paint();return w;}
+
+// ───────────────────────── navigation
+let curP=null,curI=-1;
+const stepsOf=id=>id==='basics'?BASICS:projOf(id).steps;
+const keyOf=(id,i)=>id==='basics'?'b'+i:id+'.'+i;
+function KICK(){if(curP==='basics')return`Basics <b>${curI+1}</b> of 4 · ${BASICS[curI].name}`;const p=projOf(curP);if(curI<0)return`Project · ${p.level}`;return`${p.name} · step <b>${curI+1}</b> of ${p.steps.length} · ${p.steps[curI].name}`;}
+function dots(){$dots.innerHTML='';const list=curP?stepsOf(curP):[];list.forEach((c,i)=>{const e=document.createElement('i');if(state.done[keyOf(curP,i)])e.className='done';if(i===curI)e.className='cur';e.title=c.name;$dots.appendChild(e);});const b=$('back');b.style.visibility=curP?'visible':'hidden';b.textContent=curP&&curP!=='basics'&&curI>=0?'← '+projOf(curP).name:'← Home';}
+function modal(html,mount){$modal.innerHTML=`<div class="card">${html}</div>`;$modal.hidden=false;mount&&mount($modal);}
+function closeModal(){$modal.hidden=true;$modal.innerHTML='';}
+$modal.addEventListener('pointerdown',e=>{if(e.target===$modal)closeModal();});
+let scene=null,fade=0;
+function go(s){scene=s;fade=1;closeModal();cv.style.cursor='default';s.enter&&s.enter();layoutStage(true);}
+function startStep(id,i){const L=stepsOf(id);if(i>=L.length)return id==='basics'?home():openProject(id);curP=id;curI=i;go(L[i].make());}
+function replay(){startStep(curP,curI);}
+function home(){curP=null;curI=-1;go(HomeScene());}
+function openProject(id){curP=id;curI=-1;go(ProjectScene(id));}
+$('back').onclick=()=>{tick();if(curP&&curP!=='basics'&&curI>=0)openProject(curP);else home();};
+function DONE(msg,title){const id=curP,i=curI;state.done[keyOf(id,i)]=true;save();chime();burst(500,260,48);const L=stepsOf(id);let nx;
+  if(i<L.length-1)nx={label:id==='basics'?'Next lesson →':'Next step →',fn:()=>startStep(id,i+1)};else nx=id==='basics'?{label:'Choose a project →',fn:home}:{label:'Back to the project',fn:()=>openProject(id)};
+  ui({kicker:KICK()+' · <b style="color:var(--ok)">complete</b>',title:title||$title.innerHTML,msg,b1:nx,b2:{label:'Replay',fn:replay}});}
+
+// ───────────────────────── pattern drafting (cm)
+function E(name,a,b,c){return c?{name,kind:'curve',a,b,c}:{name,kind:'line',a,b};}
+function bbox(pts){let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;for(const p of pts){if(p.x<x0)x0=p.x;if(p.y<y0)y0=p.y;if(p.x>x1)x1=p.x;if(p.y>y1)y1=p.y;}return{x0,y0,x1,y1,w:x1-x0,h:y1-y0};}
+function edgePts(e,n=14){return e.kind==='line'?[e.a,e.b]:sampleQuad(e.a,e.c,e.b,n);}
+function piece(name,cut,onFold,edges,x={}){const poly=[];edges.forEach(e=>edgePts(e).forEach((p,i)=>{if(i||!poly.length)poly.push(p);}));if(!onFold)poly.pop();return{name,cut,onFold,edges,poly,bb:bbox(poly),...x};}
+const r1=v=>Math.round(v*10)/10;
+function trouser(m,ease){const wW=r1(m.waist/4+1+ease*.5),hipW=r1(m.hip/4+1+ease),ext=r1(m.hip/16),rise=r1(m.hip/4+1),O=m.outseam,cx=r1((hipW-ext)/2),knee=r1(rise+(O-rise)/2-4),hw=r1(9.5+ease*.4);
+  return piece(ease?'Trouser front':'Front leg','Cut 2 (a left & a right)',false,[E('waist',P(1.5,0),P(wW+1.5,0)),E('hip curve',P(wW+1.5,0),P(hipW,rise),P(hipW+.3,7)),E('outseam',P(hipW,rise),P(cx+hw,O)),E('hem',P(cx+hw,O),P(cx-hw,O)),E('inseam',P(cx-hw,O),P(-ext,rise),P(cx-hw-1,knee)),E('crotch curve',P(-ext,rise),P(0,rise-8),P(0,rise)),E('centre front',P(0,rise-8),P(1.5,0))],{cx,rise,wW,hipW,ext,O});}
+function drafts(m){const B=m.bust,Wa=m.waist,Hp=m.hip,L=m.length,A=m.arm,D={};
+  {const qB=r1(B/4+3.5),qH=r1(Hp/4+4),armD=r1(B/8+9.5),hemW=r1(Math.max(qB,qH)+4),Lh=L+3;
+   D.shift={front:piece('Front','Cut 1 on fold (and a back with a 3 cm neckline)',true,[E('hem',P(0,Lh),P(hemW,Lh)),E('side seam',P(hemW,Lh),P(qB,armD)),E('armhole',P(qB,armD),P(18.5,4),P(qB-7.5,armD-3)),E('shoulder',P(18.5,4),P(7.5,0)),E('neckline',P(7.5,0),P(0,9),P(7.5,9))],{seams:['shoulder','side seam']})};}
+  {const qB=r1(B/4+3.5),armD=r1(B/8+9.5),wy=r1(B/8+29),qW=r1(Wa/4+3.5),sw=r1(qW*1.8+1.5),sl=r1(L-wy+4.5);
+   D.sundress={wy,qW,sw,sl,bodice:piece('Bodice','Cut 2 on fold (front & back)',true,[E('waist',P(0,wy),P(qW,wy)),E('side seam',P(qW,wy),P(qB,armD)),E('armhole',P(qB,armD),P(12.5,2),P(qB-6,armD-5)),E('strap',P(12.5,2),P(7.5,0)),E('neckline',P(7.5,0),P(0,13),P(7.5,13))]),skirt:piece('Skirt','Cut 2 on fold (front & back)',true,[E('top edge',P(0,0),P(sw,0)),E('side seam',P(sw,0),P(sw,sl)),E('hem',P(sw,sl),P(0,sl))])};}
+  {const qB=r1(B/4+3.5),armD=r1(B/8+9.5),wy=r1(B/8+29),qW=r1(Wa/4+6.5),qH=r1(Hp/4+3.5),hemW=r1(qH+3),Lh=L+3;
+   D.darted={wy,dart:{x:r1(qB*.45),y:wy},front:piece('Front','Cut 1 on fold',true,[E('hem',P(0,Lh),P(hemW,Lh)),E('lower side seam',P(hemW,Lh),P(qW,wy),P(qH+1.5,wy+18)),E('upper side seam',P(qW,wy),P(qB,armD)),E('armhole',P(qB,armD),P(18.5,4),P(qB-7.5,armD-3)),E('shoulder',P(18.5,4),P(7.5,0)),E('neckline',P(7.5,0),P(0,9),P(7.5,9))],{seams:['shoulder','upper side seam','lower side seam']})};}
+  {const qB=r1(B/4+4.5),armD=r1(B/8+10.5),sl=r1(L*.78),x=-2.5,capH=r1(armD*.62),bw=r1(B*.17+2.5);
+   D.shirt={sl,armD,sp:P(19.5,4.5),front:piece('Front','Cut 2 (a left & a right)',false,[E('hem',P(x,sl),P(qB+1,sl)),E('side seam',P(qB+1,sl),P(qB,armD)),E('armhole',P(qB,armD),P(19.5,4.5),P(qB-7.5,armD-3)),E('shoulder',P(19.5,4.5),P(7.5,0)),E('neckline',P(7.5,0),P(x,8),P(7,8.5)),E('front edge',P(x,8),P(x,sl))],{seams:['shoulder','side seam']}),sleeve:piece('Sleeve','Cut 2 on fold',true,[E('cuff edge',P(0,A),P(12,A)),E('underarm seam',P(12,A),P(bw,capH)),E('sleeve cap',P(bw,capH),P(0,0),P(bw*.6,.5))])};}
+  D.jeans={front:trouser(m,0),pocket:[P(0,0),P(15,0),P(15,13.5),P(7.5,16),P(0,13.5)]};
+  {const qB=r1(B/4+5.5),armD=r1(B/8+11),jl=r1(L*.76),wy=r1(B/8+29),qW=r1(Wa/4+6.5),hs=r1(Hp/4+5),x=-2.5,bp=r1(wy-4),capH=r1(armD*.62),bw=r1(B*.17+4);
+   D.suit={jl,wy,bp,sp:P(20,4.5),dart:{x:r1(qB*.42),y:wy},front:piece('Jacket front','Cut 2 (a left & a right)',false,[E('shoulder',P(8.5,0),P(20,4.5)),E('armhole',P(20,4.5),P(qB,armD),P(qB-7,armD-3)),E('side seam',P(qB,armD),P(hs,jl),P(qW,wy)),E('hem',P(hs,jl),P(x,jl-7),P(x+1,jl+.5)),E('front edge',P(x,jl-7),P(x,bp)),E('lapel',P(x,bp),P(-8,11)),E('notch',P(-8,11),P(-3,8.5)),E('gorge',P(-3,8.5),P(8.5,0))]),
+    interf:[P(-8,11),P(x,bp),P(x,jl-7),P(6,jl-5),P(6,9),P(-3,8.5)],roll:[P(x,bp),P(7,1.5)],sleeve:piece('Sleeve','Cut 2 on fold',true,[E('cuff edge',P(0,A+2),P(14,A+2)),E('underarm seam',P(14,A+2),P(bw,capH)),E('sleeve cap',P(bw,capH),P(0,0),P(bw*.6,.5))]),trouser:trouser(m,2.5)};}
+  return D;}
+let _dr=null,_drk='';
+function DR(){const k=JSON.stringify(state.m);if(k!==_drk){_drk=k;_dr=drafts(state.m);}return _dr;}
+function cutPoly(id,key){const c=state.cuts[id+'.'+key];return c&&c.length>3?c.map(p=>P(p.x,p.y)):DR()[id][key].poly;}
+const mxP=p=>P(-p.x,p.y);
+const fullH=h=>h.concat(h.slice().reverse().map(mxP));
+function fullPolys(id,key){const pc=DR()[id][key],h=cutPoly(id,key);return pc.onFold?[fullH(h)]:[h.map(mxP),h];}
+function insetEdge(e,poly,d=1.5){const pts=edgePts(e,10);const c=centroid(poly);return pts.map((p,i)=>{const a=pts[Math.max(0,i-1)],b=pts[Math.min(pts.length-1,i+1)];let n=P(-(b.y-a.y),b.x-a.x);const l=Math.hypot(n.x,n.y)||1;n=P(n.x/l,n.y/l);if((c.x-p.x)*n.x+(c.y-p.y)*n.y<0)n=P(-n.x,-n.y);return P(p.x+n.x*d,p.y+n.y*d);});}
+function fabricLayout(pc){const bb=pc.bb,x0=pc.onFold?0:bb.x0-3,x1=bb.x1+5,y0=bb.y0-5,y1=bb.y1+5,w=x1-x0,h=y1-y0;const k=Math.min(590/h,460/w,9);const fw=w*k,fh=h*k,fx=440-fw/2,fy=(H-fh)/2;
+  const toW=p=>P(fx+(p.x-x0)*k,fy+(p.y-y0)*k),toCm=p=>P((p.x-fx)/k+x0,(p.y-fy)/k+y0);
+  return{k,fx,fy,fw,fh,x0,y0,toW,toCm,right:fx+fw,rect:[P(fx,fy),P(fx+fw,fy),P(fx+fw,fy+fh),P(fx,fy+fh)]};}
+function drawFolded(F,hex){const r=F.rect;ctx.save();ctx.translate(4,5);cloth(r,hex,{thick:0,sb:20,so:10});ctx.restore();cloth(r,hex,{thick:2,shadow:false});
+  const g=ctx.createLinearGradient(F.fx,0,F.fx+18,0);g.addColorStop(0,'rgba(0,0,0,.22)');g.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=g;ctx.fillRect(F.fx,r[0].y,18,r[3].y-r[0].y);
+  ctx.fillStyle='rgba(255,255,255,.12)';ctx.fillRect(r[1].x-7,r[0].y,7,r[3].y-r[0].y);ctx.save();ctx.setLineDash([2,3]);ctx.strokeStyle=lum(hex)>.6?'rgba(0,0,0,.2)':'rgba(255,255,255,.35)';ctx.beginPath();ctx.moveTo(r[1].x-3.5,r[0].y+4);ctx.lineTo(r[1].x-3.5,r[3].y-4);ctx.stroke();ctx.restore();
+  font(11,600);ctx.fillStyle='rgba(29,32,39,.45)';ctx.save();ctx.translate(F.fx-16,(r[0].y+r[3].y)/2);ctx.rotate(-Math.PI/2);ctx.textAlign='center';ctx.fillText('FOLD',0,0);ctx.restore();ctx.save();ctx.translate(r[1].x+18,(r[0].y+r[3].y)/2);ctx.rotate(Math.PI/2);ctx.textAlign='center';ctx.fillText('SELVEDGES',0,0);ctx.restore();}
+function fitMap(pts,box){const bb=bbox(pts),s=Math.min(box.w/bb.w,box.h/bb.h);const ox=box.x+(box.w-bb.w*s)/2,oy=box.y+(box.h-bb.h*s)/2;return{s,M:p=>P(ox+(p.x-bb.x0)*s,oy+(p.y-bb.y0)*s)};}
+
+// ───────────────────────── geometry helpers
+function resample(pts,step=14){const out=[P(pts[0].x,pts[0].y)];let acc=0;for(let i=1;i<pts.length;i++){let a=pts[i-1];const b=pts[i];let d=dist(a,b);while(acc+d>=step&&d>0){const t=(step-acc)/d;a=P(lerp(a.x,b.x,t),lerp(a.y,b.y,t));out.push(a);d=dist(a,b);acc=0;}acc+=d;}out.push(P(pts[pts.length-1].x,pts[pts.length-1].y));return out;}
+function gridIn(poly,step=22){const bb=bbox(poly),r=[];for(let x=bb.x0+step/2;x<bb.x1;x+=step)for(let y=bb.y0+step/2;y<bb.y1;y+=step)if(inPoly(P(x,y),poly))r.push(P(x,y));return r;}
+function mkPath(pts){const cum=[0];for(let i=1;i<pts.length;i++)cum.push(cum[i-1]+dist(pts[i],pts[i-1]));const n=pts.length,L=cum[n-1]||1;
+  return{pts,L,
+    at(s){if(s<=0){const a=pts[0],b=pts[1],l=dist(a,b)||1;return P(a.x+(b.x-a.x)/l*s,a.y+(b.y-a.y)/l*s);}if(s>=L){const a=pts[n-2],b=pts[n-1],l=dist(a,b)||1,e=s-L;return P(b.x+(b.x-a.x)/l*e,b.y+(b.y-a.y)/l*e);}let i=1;while(i<n-1&&cum[i]<s)i++;const a=pts[i-1],b=pts[i],t=(s-cum[i-1])/((cum[i]-cum[i-1])||1);return P(lerp(a.x,b.x,t),lerp(a.y,b.y,t));},
+    proj(p){let best=null;for(let i=0;i<n-1;i++){const a=pts[i],b=pts[i+1],dx=b.x-a.x,dy=b.y-a.y,l2=dx*dx+dy*dy||1,l=Math.sqrt(l2);let t=((p.x-a.x)*dx+(p.y-a.y)*dy)/l2;if(!(i===0&&t<0)&&!(i===n-2&&t>1))t=clamp(t,0,1);const q=P(a.x+dx*t,a.y+dy*t),d=dist(p,q);if(!best||d<best.d)best={d,s:cum[i]+t*l};}return best;}};}
+
+// ───────────────────────── stitching engine (any straight or curved path)
+function Stitcher(o){
+  const path=mkPath(o.path||[o.a,o.b]),len=path.L,Lp=o.L*o.pxcm,start=path.at(0);
+  const along=p=>path.proj(p).s,offD=p=>path.proj(p).d,at=s=>path.at(s);
+  const S={pierces:[],done:false,flipped:false,needle:P(start.x+40,start.y-90),hover:false,idle:0,shake:0,stats:{off:[],len:[]}};
+  let holes=[],seq=[];
+  if(o.guided){if(o.holes)holes=o.holes;else{const n=o.nHoles;for(let i=0;i<n;i++)holes.push(at(i*len/(n-1)));}
+    if(o.seq)seq=o.seq;else if(o.rule==='running')for(let i=0;i<holes.length;i++)seq.push({h:i,dir:i%2?'down':'up'});else{seq.push({h:1,dir:'up'},{h:0,dir:'down'});for(let i=2;i<holes.length;i++)seq.push({h:i,dir:'up'},{h:i-1,dir:'down'});}}
+  let rope=null,maxS=0,lastS=0,front=start,prevHole=start;
+  const nextDir=()=>S.pierces.length%2===0?'up':'down';
+  function err(m){S.shake=1;bad();o.onError&&o.onError(m);}
+  function add(p,dir){S.pierces.push({x:p.x,y:p.y,dir});pop();S.idle=0;const e=eyeOf();rope=new Rope(p,e,16,Math.max(110,dist(p,e)*1.1),{damp:.88,color:o.color||THREAD,w:4});rope.nodes[0].pin=true;rope.last.pin=true;o.onPierce&&o.onPierce(S.pierces.length);}
+  function eyeOf(){const ang=-.95;return P(S.needle.x+Math.cos(ang)*110,S.needle.y+Math.sin(ang)*110);}
+  function finish(){S.done=true;const offs=S.stats.off,ls=S.stats.len;const mo=offs.length?offs.reduce((x,y)=>x+y,0)/offs.length:0;let sd=0;if(ls.length>1){const mean=ls.reduce((x,y)=>x+y,0)/ls.length;sd=Math.sqrt(ls.reduce((x,y)=>x+(y-mean)**2,0)/ls.length)/mean;}S.score={mo,sd,stars:o.guided?3:(mo<.12&&sd<.18?3:mo<.22&&sd<.3?2:1)};setTimeout(()=>o.onDone&&o.onDone(S.score),350);}
+  S.expected=function(){if(o.guided){const st=seq[S.pierces.length];return st?holes[st.h]:null;}const dir=nextDir();if(o.rule==='running')return S.pierces.length?at(lastS+Lp):at(0);return dir==='up'?at(maxS+Lp):prevHole;};
+  S.down=function(p){if(S.done)return;S.needle=P(p.x,p.y);
+    if(o.guided){const st=seq[S.pierces.length];const h=holes[st.h];if(dist(p,h)<GR(o.hitR||17)){add(h,st.dir);if(S.pierces.length===seq.length)finish();}else{const near=holes.findIndex(q=>dist(q,p)<GR(17));err(near>=0&&o.wrong?o.wrong(st,near):'Tap the glowing hole.');}return;}
+    const s=along(p),dOff=offD(p)/o.pxcm,dir=nextDir(),mm=v=>Math.round(v*10)+' mm';
+    if(dOff>Math.max(o.tolOff,9/view.s/o.pxcm)){err(`Stay on the line — that’s ${mm(dOff)} away from it.`);return;}
+    if(o.rule==='running'){
+      if(!S.pierces.length){if(s<-Lp*.6||s>Lp*1.3){err('Start right at the beginning of the line.');return;}}
+      else{const ds=s-lastS;if(ds<Lp*.5){err(`Too short — move about ${mm(o.L)} further along.`);return;}if(ds>Lp*1.9){err(`Too long — keep each stitch about ${mm(o.L)}.`);return;}S.stats.len.push(ds/o.pxcm);}
+      S.stats.off.push(dOff);add(p,dir);lastS=s;if(dir==='down'&&s>=len-Lp*.95)finish();return;}
+    if(dir==='up'){const ds=s-maxS;if(ds<Lp*.5){err(`Come up one stitch-length (about ${mm(o.L)}) <b>ahead</b> of your last stitch.`);return;}if(ds>Lp*1.9){err(`Too far ahead — about ${mm(o.L)} is right.`);return;}S.stats.off.push(dOff);S.stats.len.push(ds/o.pxcm);add(p,'up');prevHole=front;front=P(p.x,p.y);maxS=s;}
+    else{if(dist(p,prevHole)<Math.max(Lp*.6,GR(14))){add(prevHole,'down');if(maxS>=len-Lp*.95)finish();}else if(s>maxS)err('Backstitch goes <b>back</b> — into the end of the last stitch.');else err('Go back down exactly where the last stitch ended.');}
+  };
+  S.move=function(p){S.needle=P(p.x,p.y);S.hover=true;};
+  S.update=function(dt){S.idle+=dt;S.shake=Math.max(0,S.shake-dt*3);if(rope){const e=eyeOf();rope.last.x=e.x;rope.last.y=e.y;rope.seg=Math.max(110,dist(rope.nodes[0],e)*1.12)/(rope.n-1);rope.step();}};
+  S.draw=function(t){const sx=Math.sin(t*60)*S.shake*4;ctx.save();ctx.translate(sx,0);
+    if(o.guided&&!S.done){holes.forEach(h=>{dot(h,3.1,'rgba(10,10,20,.35)');dot(P(h.x,h.y+.8),3.1,null,'rgba(255,255,255,.18)',1);});}
+    const pc=S.pierces,col=o.color||THREAD;
+    for(let i=1;i<pc.length;i++){const top=pc[i].dir==='down',vis=S.flipped?!top:top;if(vis){if(S.flipped){const dx=pc[i].x-pc[i-1].x,dy=pc[i].y-pc[i-1].y,l=Math.hypot(dx,dy)||1,nn=P(-dy/l,dx/l),q=(i%4<2?3:-3);cable([P(pc[i-1].x+nn.x*q,pc[i-1].y+nn.y*q),P(pc[i].x+nn.x*q,pc[i].y+nn.y*q)],col,3.4);}else cable([pc[i-1],pc[i]],col,3.6);}else dashed([pc[i-1],pc[i]],rgba(col,.35),2,[3,4]);}
+    pc.forEach(p=>dot(p,1.7,'rgba(0,0,0,.35)'));
+    if(pc.length&&!S.flipped&&!o.noKnot){ctx.save();ctx.globalAlpha=.4;dot(pc[0],4.5,shade(col,-.2));ctx.restore();}
+    if(!S.done){const ex=S.expected();if(ex&&((o.guided&&pc.length<(o.showFirst??99))||S.idle>(o.guided?2.5:3.5)))ring(ex,t);}
+    if(!S.done){const under=pc.length&&pc[pc.length-1].dir==='down';if(rope)rope.draw(under?.35:1);drawNeedle(S.needle,-.95,110,under?.45:1);
+      if(!o.guided&&S.hover){let ref=null;const dir=nextDir();if(o.rule==='running'&&pc.length)ref=lastS;else if(o.rule==='back'&&dir==='up')ref=maxS;if(ref!=null){const ds=(along(S.needle)-ref)/o.pxcm;if(ds>0){const ok=ds>=o.L*.5&&ds<=o.L*1.9;pillText(S.needle.x-34,S.needle.y+26,`${Math.round(ds*10)} mm`,'#fff',ok?'#2f7d55':CORAL,12);}}}}
+    ctx.restore();};
+  return S;}
+
+// ───────────────────────── reusable tools
+function Iron(targets,onDone,start=P(880,560)){const I={pos:P(start.x,start.y),on:false,pts:targets.map(p=>({p,on:false})),steam:[],fin:false};
+  I.prog=()=>I.pts.filter(q=>q.on).length/Math.max(1,I.pts.length);
+  I.down=p=>{if(!I.fin&&dist(p,I.pos)<GR(60)){I.on=true;return true;}return false;};
+  I.move=p=>{if(!I.on)return;I.pos=P(p.x,p.y);const c=P(I.pos.x-6,I.pos.y+4);let n=0;I.pts.forEach(q=>{if(!q.on&&dist(q.p,c)<32){q.on=true;n++;}});if(n){I.steam.push({x:I.pos.x-20+Math.random()*30,y:I.pos.y-24,t:0,s:Math.random()*6});if(Math.random()<.4)tone(200+Math.random()*80,.05,.02,'sine');}if(!I.fin&&I.prog()>.93){I.fin=true;I.on=false;onDone&&onDone();}};
+  I.up=()=>{I.on=false;};I.hover=p=>{cv.style.cursor=dist(p,I.pos)<GR(60)?'grab':'default';};
+  I.update=dt=>{I.steam.forEach(s=>{s.t+=dt;s.y-=30*dt;s.x+=Math.sin(s.t*5+s.s)*.4;});I.steam=I.steam.filter(s=>s.t<1.2);};
+  I.draw=t=>{I.pts.forEach(q=>{if(!q.on){ctx.save();ctx.globalAlpha=.45+.25*Math.sin(t*4+q.p.y*.05);dot(q.p,3,'#fff','rgba(0,0,0,.25)',1);ctx.restore();}});I.steam.forEach(s=>{ctx.save();ctx.globalAlpha=(1-s.t/1.2)*.5;dot(s,6+s.t*10,'#fff');ctx.restore();});if(I.fin)return;
+    ctx.save();ctx.translate(I.pos.x,I.pos.y);shadow(14,8,.3);ctx.beginPath();ctx.moveTo(-50,18);ctx.lineTo(40,18);ctx.quadraticCurveTo(48,18,50,6);ctx.quadraticCurveTo(30,-18,-38,-18);ctx.quadraticCurveTo(-50,-18,-50,-4);ctx.closePath();const g=ctx.createLinearGradient(0,-18,0,18);g.addColorStop(0,'#f6f6f5');g.addColorStop(1,'#cfcfcd');ctx.fillStyle=g;ctx.fill();noShadow();ctx.strokeStyle=CORAL;ctx.lineWidth=6;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(-34,-20);ctx.quadraticCurveTo(-10,-42,24,-20);ctx.stroke();ctx.restore();
+    pillText(I.pos.x,I.pos.y+40,`${Math.round(I.prog()*100)}% pressed`,'#fff',INK,12);};
+  return I;}
+function SliceTool(onChange){const T={line:null,drag:null};
+  T.down=p=>{if(T.line&&dist(p,T.line.a)<GR(16)){T.drag='a';return;}if(T.line&&dist(p,T.line.b)<GR(16)){T.drag='b';return;}T.line={a:P(p.x,p.y),b:P(p.x,p.y)};T.drag='b';};
+  T.move=p=>{if(T.drag&&T.line)T.line[T.drag]=P(p.x,p.y);};
+  T.up=()=>{T.drag=null;if(T.line&&dist(T.line.a,T.line.b)<14)T.line=null;onChange&&onChange(!!T.line);};
+  T.draw=()=>{if(T.line){dashed([T.line.a,T.line.b]);handle(T.line.a,T.drag==='a');handle(T.line.b,T.drag==='b');}};
+  return T;}
+function satin(a,b,col,w=5){const n=Math.max(3,Math.round(dist(a,b)/2.6)),dx=b.x-a.x,dy=b.y-a.y,l=Math.hypot(dx,dy)||1,nn=P(-dy/l*w,dx/l*w);ctx.save();ctx.strokeStyle=col;ctx.lineWidth=1.3;ctx.lineCap='round';for(let i=0;i<=n;i++){const p=P(lerp(a.x,b.x,i/n),lerp(a.y,b.y,i/n));ctx.beginPath();ctx.moveTo(p.x-nn.x*.5,p.y-nn.y*.5);ctx.lineTo(p.x+nn.x*.5,p.y+nn.y*.5);ctx.stroke();}ctx.restore();}
+function drawButton(c,r,col,holes=4){ctx.save();shadow(8,5,.3);dot(c,r,col);noShadow();const g=ctx.createRadialGradient(c.x-r*.3,c.y-r*.4,r*.1,c.x,c.y,r);g.addColorStop(0,'rgba(255,255,255,.35)');g.addColorStop(1,'rgba(0,0,0,.12)');dot(c,r,g);dot(c,r*.78,null,'rgba(0,0,0,.12)',2);ctx.restore();}
+
+// body profile for dress form (cm from neck top, half-width cm)
+function bodyProfile(m){const q=.62;return[[0,5.2],[7,5.6],[9.5,8.5],[12,17],[15,18.2],[22,m.bust/4*q*.95],[29,m.bust/4*q],[36,(m.bust+m.waist)/8*q],[42,m.waist/4*q],[52,(m.waist+m.hip)/8*q*1.02],[62,m.hip/4*q],[70,m.hip/4*q*.96],[74,m.hip/4*q*.86]];}
+function hwAt(pr,y){if(y<=pr[0][0])return pr[0][1];for(let i=1;i<pr.length;i++)if(y<=pr[i][0]){const t=(y-pr[i-1][0])/(pr[i][0]-pr[i-1][0]),s=t*t*(3-2*t);return lerp(pr[i-1][1],pr[i][1],s);}return pr[pr.length-1][1];}
+function drawForm(pr,cx,top,kk,floor=625){const R=[],Lf=[];for(let y=0;y<=74;y+=1){const w=hwAt(pr,y)*kk;R.push(P(cx+w,top+y*kk));Lf.push(P(cx-w,top+y*kk));}
+  // stand
+  const by=top+74*kk;ctx.save();shadow(10,6,.2);ctx.fillStyle='#c9c9c7';ctx.beginPath();ctx.ellipse(cx,floor,70,11,0,0,7);ctx.fill();noShadow();const g0=ctx.createLinearGradient(cx-70,0,cx+70,0);g0.addColorStop(0,'#cfcfcd');g0.addColorStop(.5,'#f4f4f3');g0.addColorStop(1,'#bdbdbb');ctx.fillStyle=g0;ctx.beginPath();ctx.ellipse(cx,floor-3,70,11,0,0,7);ctx.fill();const g1=ctx.createLinearGradient(cx-5,0,cx+5,0);g1.addColorStop(0,'#bdbdbb');g1.addColorStop(.5,'#f7f7f6');g1.addColorStop(1,'#a9a9a7');ctx.fillStyle=g1;ctx.fillRect(cx-4.5,by-4,9,floor-by);ctx.restore();
+  const pts=R.concat(Lf.reverse());ctx.save();path(pts);shadow(22,12,.22);ctx.fillStyle='#e7dccb';ctx.fill();noShadow();ctx.fillStyle=weave('#ebe1d0');ctx.fill();const g=ctx.createLinearGradient(cx-hwAt(pr,30)*kk*1.3,0,cx+hwAt(pr,30)*kk*1.3,0);g.addColorStop(0,'rgba(80,60,40,.28)');g.addColorStop(.35,'rgba(255,255,255,.12)');g.addColorStop(.6,'rgba(255,255,255,0)');g.addColorStop(1,'rgba(80,60,40,.3)');ctx.fillStyle=g;ctx.fill();ctx.strokeStyle='rgba(90,70,50,.18)';ctx.lineWidth=1;ctx.stroke();
+  // center seam & cap
+  ctx.setLineDash([3,3]);ctx.strokeStyle='rgba(90,70,50,.2)';ctx.beginPath();ctx.moveTo(cx,top+9*kk);ctx.lineTo(cx,by);ctx.stroke();ctx.setLineDash([]);
+  const cg=ctx.createLinearGradient(0,top-8,0,top+6);cg.addColorStop(0,'#c49a6c');cg.addColorStop(1,'#8f6a45');shadow(4,2,.2);ctx.fillStyle=cg;ctx.beginPath();ctx.ellipse(cx,top,hwAt(pr,0)*kk+1,6,0,0,7);ctx.fill();noShadow();ctx.restore();}
+
+
+// ═════════════════════════ BASICS ═════════════════════════
+// ───────── 1. THREAD & KNOT
+function ThreadScene(ci){
+  const X0=110,PX=8,RT=452,RB=512,TY=478;const clip=P(X0,TY),spool=P(935,TY-12);
+  const eyeA=-2.5,nTip=P(530,420),nLen=270;let eye=null;
+  let rope,kept=null,reel=null,phase='cut',line=null,drag=null,cutter=null,t=0,tipGrab=false,thr=-1,loop=null,trail=[],knot=0,needleIn=0,clipA=1,retry=false;
+  function makeRope(){const A=P(clip.x+12,clip.y),Bp=P(spool.x-30,spool.y+8);rope=new Rope(A,Bp,72,dist(A,Bp)*1.035,{wave:6,waves:5,damp:.9});rope.nodes[0].pin=true;rope.last.pin=true;}
+  makeRope();
+  const head=()=>({kicker:KICK(),title:'Cut about <em>50 cm</em> of thread.'});
+  function uiCut(m){ui({...head(),msg:m||'Drag a line across the thread to place your scissors, fine-tune the ends, then press <b>Cut</b>. Aim for the marked zone: longer thread tangles, shorter means re-threading all day.',b1:{label:'Cut',disabled:!line,fn:doCut},b2:{label:'Restart',fn:()=>replay()}});}
+  function doCut(){if(!line||cutter)return;const a=line.a,b=line.b;let hit=null;const N=rope.nodes;for(let i=0;i<N.length-1;i++){const r=segInt(a,b,N[i],N[i+1]);if(r){hit={...r,i};break;}}
+    const L=dist(a,b);cutter=new Cutter([a,b],()=>{cutter=null;if(!hit){uiCut('Missed! Your line has to <b>cross</b> the thread.');}},d=>{if(hit&&!hit.done&&d>=hit.t*L){hit.done=true;split(hit);}});line=null;b1On(false);}
+  function split(h){const N=rope.nodes,p=P(h.x,h.y);const left=N.slice(0,h.i+1).concat([p]),right=[p].concat(N.slice(h.i+1));kept=Rope.from(left,{damp:.86});kept.nodes[0].pin=true;reel=Rope.from(right,{damp:.9});reel.last.pin=true;rope=null;snip(.9);
+    const cm=(p.x-X0)/PX;const sv=P(N[h.i+1].x-N[h.i].x,N[h.i+1].y-N[h.i].y),cvv=P(Math.cos(h.cutAng||0),0);
+    let ang=Math.abs(Math.atan2(h.cross,h.dot))*180/Math.PI;if(ang>90)ang=180-ang;
+    const angled=ang<70&&ang>20;
+    if(cm<40||cm>65){float(p.x,p.y-30,`${cm.toFixed(0)} cm`,CORAL);setTimeout(()=>{kept=null;reel=null;makeRope();uiCut(cm<40?`${cm.toFixed(0)} cm is too short — you’d run out after a few stitches. Try again in the zone.`:`${cm.toFixed(0)} cm is too long — it will tangle and knot as you sew. Try again in the zone.`);},1100);return;}
+    float(p.x,p.y-30,`${cm.toFixed(0)} cm ✓`,'#2f7d55');
+    setTimeout(()=>{phase='thread';ui({kicker:KICK(),title:'Thread the <em>needle</em>.',msg:(angled?'Nice slanted cut — a pointed end slips through the eye much more easily. ':'Tip: next time cut at a <b>slant</b> — a pointed end threads easier. ')+'Now drag the cut end of the thread into the <b>eye</b> of the needle.',b2:{label:'Restart',fn:()=>replay()}});},900);}
+  return{enter(){uiCut();},
+    update(dt){t+=dt;if(rope)rope.step();if(kept)kept.step();if(reel){reel.step();if(reel.n>2){reel.nodes.shift();reel.n--;reel.nodes.shift();reel.n--;}else reel=null;}if(cutter)cutter.update(dt);
+      if(phase!=='cut')needleIn=Math.min(1,needleIn+dt*2);
+      if(thr>=0&&thr<1){thr=Math.min(1,thr+dt*2);const d=P(Math.cos(eyeA),Math.sin(eyeA)),n=P(-d.y,d.x);kept.last.x=eye.x+n.x*44*thr;kept.last.y=eye.y+n.y*44*thr;if(thr>=1){kept.last.pin=false;const k=kept.n-7;kept.nodes[k].pin=true;kept.nodes[k].x=eye.x;kept.nodes[k].y=eye.y;}}
+      if(knot>0)knot=Math.min(1,knot+dt*3);if(phase==='knot')clipA=Math.max(0,clipA-dt*3);trail.forEach(q=>q.a-=dt*1.4);trail=trail.filter(q=>q.a>0);},
+    bounds(){return{x:70,y:215,w:905,h:330};},
+    down(p){if(phase==='cut'){if(cutter)return;if(line&&dist(p,line.a)<GR(16)){drag='a';return;}if(line&&dist(p,line.b)<GR(16)){drag='b';return;}line={a:P(p.x,p.y),b:P(p.x,p.y)};drag='b';return;}
+      if(phase==='thread'&&kept&&thr<0&&dist(p,kept.last)<GR(36)){tipGrab=true;kept.last.pin=true;return;}
+      if(phase==='knot'&&!knot){const e=kept.nodes[0];if(dist(p,e)<80){loop={acc:0,last:Math.atan2(p.y-e.y,p.x-e.x)};}}},
+    move(p){if(phase==='cut'&&drag&&line){line[drag]=P(p.x,p.y);}
+      if(tipGrab){const o=kept.nodes[0];const v=P(p.x-o.x,p.y-o.y),d=Math.hypot(v.x,v.y),mx=kept.length*.97;const q=d>mx?P(o.x+v.x/d*mx,o.y+v.y/d*mx):p;kept.last.x=q.x;kept.last.y=q.y;
+        if(eye&&dist(q,eye)<Math.max(14,GR(14)*.7)){tipGrab=false;thr=0;pop();float(eye.x+30,eye.y-26,'Threaded!','#2f7d55');setTimeout(()=>{phase='knot';kept.nodes[0].pin=false;kept.damp=.8;ui({kicker:KICK(),title:'Tie a <em>knot</em>.',msg:'Draw a circle around the <b>long end</b> of the thread. In real life: wrap the end once around your fingertip, roll it off with your thumb, and pull tight.',b2:{label:'Restart',fn:()=>replay()}});},700);}}
+      if(loop){const e=kept.nodes[0];const a=Math.atan2(p.y-e.y,p.x-e.x);let d=a-loop.last;if(d>Math.PI)d-=Math.PI*2;if(d<-Math.PI)d+=Math.PI*2;loop.acc+=d;loop.last=a;trail.push({x:p.x,y:p.y,a:1});if(Math.abs(loop.acc)>Math.PI*1.8){loop=null;knot=.01;pop();setTimeout(()=>DONE('Threaded and knotted. The knot stops your first stitch from pulling straight through the fabric. Up next: your first stitch.','Thread the <em>needle</em>.'),500);}}},
+    up(){if(phase==='cut'){drag=null;if(line&&dist(line.a,line.b)<20)line=null;b1On(!!line&&!cutter);}if(tipGrab){tipGrab=false;}if(loop){if(!knot)setMsg('Almost — go <b>all the way around</b> the end of the thread in one motion.');loop=null;}},
+    draw(){// ruler
+      metal(X0-20,RT,850,RB-RT,8,{sb:10,so:5,sa:.18});const zx0=X0+45*PX,zx1=X0+60*PX;ctx.fillStyle=rgba(CORAL,.16);ctx.fillRect(zx0,RT+1,zx1-zx0,RB-RT-2);ctx.fillStyle=CORAL;ctx.fillRect(zx0,RT+1,1.5,RB-RT-2);ctx.fillRect(zx1-1.5,RT+1,1.5,RB-RT-2);
+      for(let c=0;c<=100;c++){const x=X0+c*PX,h=c%10===0?14:c%5===0?9:5;ctx.fillStyle='rgba(29,32,39,.55)';ctx.fillRect(x-.5,RB-1-h,1,h);if(c%10===0){font(10.5,600);ctx.textAlign='center';ctx.fillText(c,x,RB-19);}}
+      font(11,600);ctx.fillStyle=CORAL;ctx.textAlign='center';ctx.fillText('45–60 cm',(zx0+zx1)/2,RT-8);font(10,500);ctx.fillStyle='rgba(29,32,39,.45)';ctx.textAlign='left';ctx.fillText('cm',X0+802,RB-19);
+      // spool
+      ctx.save();const sx=spool.x,sy=spool.y;shadow(10,6,.25);ctx.fillStyle='#c79d6e';rr(sx-24,sy-44,48,10,4);ctx.fill();rr(sx-24,sy+34,48,10,4);ctx.fill();noShadow();ctx.fillStyle=THREAD;rr(sx-19,sy-36,38,72,3);ctx.fill();for(let i=0;i<18;i++){ctx.fillStyle=i%2?'rgba(255,255,255,.12)':'rgba(0,0,0,.08)';ctx.fillRect(sx-19,sy-36+i*4,38,2);}const sg=ctx.createLinearGradient(sx-19,0,sx+19,0);sg.addColorStop(0,'rgba(0,0,0,.2)');sg.addColorStop(.4,'rgba(255,255,255,.15)');sg.addColorStop(1,'rgba(0,0,0,.25)');ctx.fillStyle=sg;ctx.fillRect(sx-19,sy-36,38,72);const wg=ctx.createLinearGradient(0,sy-44,0,sy-34);wg.addColorStop(0,'#dcb88c');wg.addColorStop(1,'#a87d50');ctx.fillStyle=wg;rr(sx-24,sy-44,48,10,4);ctx.fill();rr(sx-24,sy+34,48,10,4);ctx.fill();ctx.restore();
+      // needle
+      if(phase!=='cut'){ctx.save();ctx.globalAlpha=ease(needleIn);ctx.translate(0,(1-ease(needleIn))*-20);eye=drawNeedle(nTip,eyeA,nLen,1,1.9);ctx.restore();if(phase==='thread'&&thr<0){ring(eye,t,12,'#2f7d55');}}
+      if(rope)rope.draw();if(reel)reel.draw();if(kept)kept.draw();
+      if(knot>0&&kept){const e=kept.nodes[0];ctx.save();shadow(3,2,.3);dot(e,4+3*ease(knot),shade(THREAD,-.15));noShadow();dot(P(e.x-1.5,e.y-1.8),1.6,'rgba(255,255,255,.55)');ctx.restore();}
+      // clip
+      if(clipA>0){ctx.save();ctx.globalAlpha=clipA;metal(clip.x-22,clip.y-16,30,32,7,{sb:8,so:4});ctx.restore();}
+      if(phase==='thread'&&kept&&thr<0&&!tipGrab)ring(kept.last,t);
+      if(phase==='knot'&&!knot&&kept){const e=kept.nodes[0];ctx.save();ctx.setLineDash([4,5]);ctx.strokeStyle=rgba(CORAL,.6);ctx.lineWidth=2;ctx.beginPath();ctx.arc(e.x,e.y,34,t*1.5,t*1.5+Math.PI*1.7);ctx.stroke();ctx.restore();ring(e,t);}
+      if(trail.length>1){ctx.save();ctx.lineCap='round';for(let i=1;i<trail.length;i++){ctx.globalAlpha=trail[i].a*.6;ctx.strokeStyle=THREAD;ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(trail[i-1].x,trail[i-1].y);ctx.lineTo(trail[i].x,trail[i].y);ctx.stroke();}ctx.restore();}
+      if(line){dashed([line.a,line.b]);handle(line.a,drag==='a');handle(line.b,drag==='b');}
+      if(cutter){cutter.drawTool();}}};}
+
+// ───────── 2. RUNNING STITCH
+function swatch(x,y,w,h,hex){const pts=[];const jag=(i)=>Math.sin(i*7.3)*1.2;for(let i=0;i<=20;i++)pts.push(P(x+w*i/20,y+jag(i)));for(let i=1;i<=10;i++)pts.push(P(x+w+jag(i),y+h*i/10));for(let i=19;i>=0;i--)pts.push(P(x+w*i/20,y+h+jag(i+3)));for(let i=9;i>0;i--)pts.push(P(x+jag(i+5),y+h*i/10));return pts;}
+function RunningScene(ci){const A=P(250,320),Bp=P(750,320);const sw=swatch(160,170,680,300);let part=1,st,t=0;
+  function mk(){st=part===1?Stitcher({a:A,b:Bp,pxcm:80,rule:'running',guided:true,nHoles:10,L:.6,showFirst:4,wrong:(s)=>`Not that one. ${s.dir==='up'?'Come <b>up</b>':'Go <b>down</b>'} through the next hole along — in, out, in, out.`,onError:m=>setMsg(m),onPierce:n=>{if(n===1)setMsg('You came <b>up</b> from underneath — the knot stops the thread. Now go <b>down</b> through the next hole.');else if(n===2)setMsg('That’s one stitch. Keep going: up, down, up, down…');},onDone:()=>{float(500,250,'Even and neat ✓','#2f7d55');setTimeout(()=>{ui({kicker:KICK(),title:'Now <em>without</em> the holes.',msg:'Same stitch on your own. Keep each stitch about <b>6 mm</b> and right on the chalk line — the readout by your needle shows the length.',b1:{label:'Try it',fn:()=>{part=2;mk();ui({kicker:KICK(),title:'Running stitch, <em>freehand</em>.',msg:'Tap along the chalk line: up, down, up, down. Aim for ~6 mm stitches.',b2:{label:'Restart',fn:()=>replay()}});}}});},500);}})
+    :Stitcher({a:A,b:Bp,pxcm:80,rule:'running',guided:false,L:.6,tolOff:.28,onError:m=>setMsg(m),onDone:s=>{float(500,250,'★'.repeat(s.stars)+'☆'.repeat(3-s.stars),CORAL);setTimeout(()=>DONE(`Average ${Math.round(s.mo*10)} mm off the line. Running stitch is quick but loose — great for <b>basting</b> (temporary stitches) and gathering. For seams you need something stronger…`,'Running stitch, <em>freehand</em>.'),700);}});}
+  mk();
+  return{enter(){ui({kicker:KICK(),title:'Sew a <em>running stitch</em>.',msg:'Tap the holes in order. The first one brings the needle <b>up</b> from underneath; the next goes back <b>down</b>. Up, down, up, down.',b2:{label:'Restart',fn:()=>replay()}});},
+    bounds(){return{x:150,y:150,w:700,h:340};},update(dt){t+=dt;st.update(dt);},down(p){st.down(p);},move(p){st.move(p);},hover(p){st.move(p);},
+    draw(){cloth(sw,'#efe6d6',{thick:2});chalk([A,Bp],2,'rgba(40,90,170,.7)');font(11,600);ctx.fillStyle='rgba(29,32,39,.35)';ctx.textAlign='left';ctx.fillText('START',A.x-6,A.y+28);ctx.textAlign='right';ctx.fillText('END',Bp.x+6,Bp.y+28);st.draw(t);}};}
+
+// ───────── 3. BACKSTITCH
+function BackScene(ci){const A=P(240,330),Bp=P(760,330);const sw=swatch(150,165,700,320);let st,t=0,flip=-1,showUnder=false;
+  st=Stitcher({a:A,b:Bp,pxcm:100,rule:'back',guided:true,nHoles:8,L:.6,showFirst:5,wrong:(s,near)=>s.dir==='down'?'Backstitch goes <b>back</b>: down into the end of the stitch you just made.':'Now come <b>up one hole ahead</b> of your furthest stitch.',onError:m=>setMsg(m),onPierce:n=>{const M=['','Up one hole in from the start…','…then <b>back</b> down to the start. That’s your first stitch.','Now come up one hole <b>ahead</b> of it…','…and back down into the end of the last stitch. See the pattern?'];if(M[n])setMsg(M[n]);else if(n===5)setMsg('Up ahead, back down. The glowing hint now only shows if you hesitate.');},onDone:()=>{float(500,250,'Solid seam ✓','#2f7d55');setTimeout(()=>ui({kicker:KICK(),title:'Look <em>underneath</em>.',msg:'On top, backstitch makes one unbroken line — just like a sewing machine.',b1:{label:'Flip the fabric',fn:()=>{flip=0;b1On(false);}},b2:{label:'Restart',fn:()=>replay()}}),500);}});
+  return{enter(){ui({kicker:KICK(),title:'The <em>backstitch</em>: strong as a machine.',msg:'Come up one stitch <b>ahead</b>, then go back down into the <b>end of the last stitch</b>. Up ahead, back down. Follow the glowing hole.',b2:{label:'Restart',fn:()=>replay()}});},
+    update(dt){t+=dt;st.update(dt);if(flip>=0&&flip<1){flip=Math.min(1,flip+dt*1.4);if(flip>=.5&&!showUnder){showUnder=true;st.flipped=true;tick();}if(flip>=1)DONE('Underneath, the stitches <b>overlap</b> in long loops — that double coverage is what makes backstitch strong. You’ll sew every seam of your dress this way.','Look <em>underneath</em>.');}},
+    bounds(){return{x:140,y:150,w:720,h:360};},down(p){if(flip<0)st.down(p);},move(p){st.move(p);},hover(p){st.move(p);},
+    draw(){const sy=flip<0?1:Math.abs(Math.cos(flip*Math.PI));ctx.save();ctx.translate(500,325);ctx.scale(1,Math.max(.02,sy));ctx.translate(-500,-325);ctx.save();ctx.translate(5,-6);cloth(sw,'#d9cdb8',{thick:2,shadow:false});ctx.restore();cloth(sw,showUnder?'#dfd5c3':'#efe6d6',{thick:2});if(!showUnder)chalk([A,Bp],2,'rgba(40,90,170,.7)');st.draw(t);ctx.restore();if(showUnder&&flip>=1){font(12,600);ctx.fillStyle='rgba(29,32,39,.4)';ctx.textAlign='center';ctx.fillText('WRONG SIDE',500,520);}}};}
+
+// ───────── 4. MEASURE
+function MeasureScene(ci){const cx=500,top=48,kk=6.6;const pr=bodyProfile(DEF.m);const steps=[{key:'bust',y:29,name:'bust',title:'Find the <em>bust</em>.',tip:'Drag the tape to the <b>fullest part</b> of the bust. Keep it level all the way round — snug, not tight.'},{key:'waist',y:42,name:'waist',title:'Find the <em>waist</em>.',tip:'Your natural waist is the <b>narrowest</b> point. Tip: bend sideways — the crease that forms is your waist.'},{key:'hip',y:62,name:'hips',title:'Find the <em>hips</em>.',tip:'Hips are the <b>fullest part of the seat</b>, usually about 20 cm below the waist.'}];
+  let si=0,ty=16,drag=false,t=0,locked=[],tail;const Y=c=>top+c*kk;
+  tail=new Rope(P(600,Y(ty)),P(610,Y(ty)+150),14,150,{g:.45,damp:.95,color:TAPE,w:10});tail.nodes[0].pin=true;
+  const val=y=>{const s=steps[si];return hwAt(pr,y)/hwAt(pr,s.y)*DEF.m[s.key];};
+  function uiStep(){const s=steps[si];ui({kicker:KICK(),title:s.title,msg:s.tip,b2:{label:'Restart',fn:()=>replay()}});}
+  function own(){modal(`<span class="tag">Your size</span><h2>Now measure yourself</h2><p>Measure over light clothing, tape level and snug. Use string and a ruler if you don’t have a tape. Your pattern will be drafted from these numbers.</p><div class="seg" id="u"><button data-u="cm" class="on">cm</button><button data-u="in">inches</button></div><div class="grid"><label>Bust / chest<input type="number" id="mb" step="0.5"></label><label>Waist<input type="number" id="mw" step="0.5"></label><label>Hips<input type="number" id="mh" step="0.5"></label><label>Dress length (shoulder → hem)<input type="number" id="ml" step="0.5"></label><label>Arm (shoulder → wrist)<input type="number" id="ma" step="0.5"></label><label>Outseam (waist → ankle)<input type="number" id="mo" step="0.5"></label></div><div class="actions"><button id="ms">Use the sample size</button><button class="primary" id="mu">Use my numbers</button></div>`,M=>{let unit='cm';const f={bust:'mb',waist:'mw',hip:'mh',length:'ml',arm:'ma',outseam:'mo'};const fill=()=>{for(const k in f)M.querySelector('#'+f[k]).value=+(state.m[k]/(unit==='in'?2.54:1)).toFixed(1);};fill();
+      M.querySelectorAll('#u button').forEach(b=>b.onclick=()=>{read();unit=b.dataset.u;M.querySelectorAll('#u button').forEach(x=>x.classList.toggle('on',x===b));fill();});
+      function read(){const lim={bust:[60,170],waist:[45,160],hip:[65,180],length:[60,140],arm:[40,85],outseam:[70,130]};for(const k in f){let v=parseFloat(M.querySelector('#'+f[k]).value);if(isFinite(v)){v*=unit==='in'?2.54:1;state.m[k]=+clamp(v,lim[k][0],lim[k][1]).toFixed(1);}}}
+      M.querySelector('#mu').onclick=()=>{read();state.cuts={};save();closeModal();fin();};M.querySelector('#ms').onclick=()=>{state.m={...DEF.m};state.cuts={};save();closeModal();fin();};});}
+  function fin(){const m=state.m;DONE(`Saved: bust <b>${m.bust}</b>, waist <b>${m.waist}</b>, hips <b>${m.hip}</b>, length <b>${m.length}</b>, arm <b>${m.arm}</b>, outseam <b>${m.outseam}</b> cm. Every project pattern is drafted from these.`,'Your <em>measurements</em>.');}
+  return{enter(){uiStep();},bounds(){return{x:280,y:30,w:470,h:605};},
+    update(dt){t+=dt;const hw=hwAt(pr,ty)*kk;tail.nodes[0].x=cx+hw+4;tail.nodes[0].y=Y(ty)+3;tail.step();},
+    down(p){if(si>=steps.length)return;drag=true;this.move(p);},move(p){if(drag)ty=clamp((p.y-top)/kk,12,72);},
+    up(){if(!drag)return;drag=false;const s=steps[si];if(Math.abs(ty-s.y)<2.6){ty=s.y;locked.push({y:s.y,v:DEF.m[s.key],name:s.name});pop();float(cx,Y(s.y)-30,`${s.name} ${DEF.m[s.key]} cm ✓`,'#2f7d55');si++;if(si<steps.length){setTimeout(()=>{ty=16;uiStep();},700);}else setTimeout(()=>{ui({kicker:KICK(),title:'Now it’s <em>your</em> turn.',msg:'The dress form measures 92 · 76 · 100. Enter your own numbers to draft a dress that fits <b>you</b> — or use the sample size for now.',b1:{label:'Enter measurements',fn:own},b2:{label:'Restart',fn:()=>replay()}});own();},800);}
+      else{bad();const s2=steps[si];setMsg(ty<s.y?`A little lower. ${s2.tip}`:`A little higher. ${s2.tip}`);}},
+    draw(){drawForm(pr,cx,top,kk);locked.forEach(l=>{const hw=hwAt(pr,l.y)*kk;ctx.save();ctx.globalAlpha=.5;ctx.strokeStyle=TAPE;ctx.lineWidth=6;ctx.beginPath();ctx.moveTo(cx-hw,Y(l.y));ctx.quadraticCurveTo(cx,Y(l.y)+9,cx+hw,Y(l.y));ctx.stroke();ctx.restore();ctx.textAlign='left';pillText(cx-hw-70,Y(l.y),`${l.name} ${l.v}`,'#fff',INK,12);});
+      if(si<steps.length){const s=steps[si];const hw=hwAt(pr,ty)*kk,y=Y(ty);
+        // guide markers
+        ctx.save();ctx.globalAlpha=.25+.15*Math.sin(t*3);ctx.setLineDash([3,5]);ctx.strokeStyle=CORAL;ctx.lineWidth=1.5;[s.y].forEach(gy=>{ctx.beginPath();ctx.moveTo(cx-hwAt(pr,gy)*kk-40,Y(gy));ctx.lineTo(cx-hwAt(pr,gy)*kk-8,Y(gy));ctx.stroke();});ctx.restore();
+        tail.draw();ctx.save();shadow(5,3,.2);ctx.strokeStyle=shade(TAPE,-.2);ctx.lineWidth=11;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(cx-hw-4,y);ctx.quadraticCurveTo(cx,y+10,cx+hw+4,y);ctx.stroke();noShadow();ctx.strokeStyle=TAPE;ctx.lineWidth=8.5;ctx.stroke();ctx.setLineDash([1,5]);ctx.strokeStyle='rgba(29,32,39,.55)';ctx.lineWidth=4;ctx.stroke();ctx.restore();
+        metal(cx+hw-6,y-11,24,22,5,{sb:6,so:3});pillText(cx+hw+80,y,`${val(ty).toFixed(1)} cm`,'#fff',INK,13);
+        if(!drag&&!locked.length&&si===0&&t<6){ctx.save();ctx.globalAlpha=.7;font(12,600);ctx.fillStyle=CORAL;ctx.textAlign='center';ctx.fillText('↕ drag',cx,y-14);ctx.restore();}}}};}
+
+
+// ═════════════════════════ MENUS ═════════════════════════
+function drawCheck(x,y){dot(P(x,y),10,CORAL);ctx.strokeStyle='#fff';ctx.lineWidth=2.2;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(x-4.5,y);ctx.lineTo(x-1,y+3.5);ctx.lineTo(x+4.5,y-3.5);ctx.stroke();}
+function plugs(ropes){ropes.forEach(r=>{[r.nodes[0],r.last].forEach((p,j)=>{ctx.save();ctx.translate(p.x,p.y);ctx.rotate(j?0:Math.PI);const g=ctx.createLinearGradient(0,-3,0,3);g.addColorStop(0,'#fbfbfb');g.addColorStop(1,'#a3a4a8');shadow(3,2,.2);ctx.fillStyle=g;rr(-1,-3.2,11,6.4,1.5);ctx.fill();noShadow();ctx.restore();});});}
+function chainRopes(B,isDone){const port=(b,s)=>P(b.x+s*(b.w/2+5),b.y-12);const ropes=[];for(let i=0;i<B.length-1;i++){if(!isDone(i))continue;const A=port(B[i],1),Bp=port(B[i+1],-1),d=dist(A,Bp);const r=new Rope(A,Bp,Math.max(14,Math.round(d/12)),d*(Math.abs(A.y-Bp.y)>20?1.08:1.2),{g:.28,damp:.97,color:i%2?'#8b3fd6':THREAD,w:5.2});r.nodes[0].pin=r.last.pin=true;ropes.push(r);}return ropes;}
+function stepBlock(b,num,name,sub,done,pulse,t,ports=true){const y=b.y-b.lift*3;metal(b.x-b.w/2,y-b.h/2,b.w,b.h,18,{sb:16+b.lift*10,so:8+b.lift*4});
+  if(ports)for(const s of[-1,1])for(let j=0;j<2;j++)dot(P(b.x+s*(b.w/2+5),y-12+j*24),4.2,'rgba(0,0,0,.13)');
+  font(12,600);ctx.fillStyle='rgba(29,32,39,.4)';ctx.textAlign='left';ctx.textBaseline='alphabetic';ctx.fillText(num,b.x-b.w/2+18,y-b.h/2+28);
+  font(18,700);ctx.fillStyle=INK;ctx.fillText(name,b.x-b.w/2+18,y+8);font(13,500);ctx.fillStyle='rgba(29,32,39,.55)';ctx.fillText(sub,b.x-b.w/2+18,y+29);
+  if(done)drawCheck(b.x+b.w/2-24,y-b.h/2+24);else if(pulse){ctx.save();ctx.globalAlpha=.55+.45*Math.sin(t*3);dot(P(b.x+b.w/2-24,y-b.h/2+24),5,CORAL);ctx.restore();}}
+function drawIcon(id,cx,cy,h,w){const sh=garmentShapes(id);const all=sh.flatMap(s=>s.pts);const {M}=fitMap(all,{x:cx-w/2,y:cy-h/2,w,h});const hex=fabOf(id);sh.forEach(s=>{const pts=s.pts.map(M);ctx.save();path(pts);shadow(6,3,.18);ctx.fillStyle=hex;ctx.fill();noShadow();ctx.fillStyle=weave(s.sh?shade(hex,s.sh):hex);ctx.fill();ctx.strokeStyle='rgba(0,0,0,.12)';ctx.lineWidth=.8;ctx.stroke();ctx.restore();});}
+function HomeScene(){let t=0,hov=-1,mode=null,B=[],ropes=[],labels=[];const bDone=i=>!!state.done['b'+i];
+  function place(){const m=portrait?2:4;if(m===mode)return;mode=m;B=[];labels=[];
+    if(m===4){labels.push(['THE BASICS',36,46]);BASICS.forEach((b,i)=>B.push({k:'b',i,x:145+i*237,y:115,w:212,h:108,lift:0}));labels.push(['PROJECTS',36,222]);PROJ.forEach((p,i)=>B.push({k:'p',i,x:200+(i%3)*300,y:315+((i/3)|0)*172,w:276,h:150,lift:0}));}
+    else{labels.push(['THE BASICS',36,30]);BASICS.forEach((b,i)=>B.push({k:'b',i,x:175+(i%2)*310,y:100+((i/2)|0)*132,w:282,h:108,lift:0}));labels.push(['PROJECTS',36,335]);PROJ.forEach((p,i)=>B.push({k:'p',i,x:175+(i%2)*310,y:430+((i/2)|0)*174,w:282,h:150,lift:0}));}
+    ropes=chainRopes(B.slice(0,4),bDone);}
+  place();const nb=BASICS.findIndex((b,i)=>!bDone(i));
+  return{enter(){ui({kicker:'A free sewing school',title:'Learn to sew your own <em>clothes</em>.',msg:'Four short basics, then pick a project: dresses, a shirt, jeans or a suit. Every pattern is drafted from <b>your</b> measurements, and everything can be sewn by hand — no machine needed.',b1:nb>=0?{label:nb===0?'Start the basics':`Continue · ${BASICS[nb].name}`,fn:()=>startStep('basics',nb)}:{label:'Open the shift dress',fn:()=>openProject('shift')},b2:{label:'What you’ll need',fn:materials}});},
+    bounds(){return mode===2?{x:20,y:5,w:630,h:880}:{x:20,y:20,w:960,h:600};},
+    update(dt){t+=dt;place();ropes.forEach(r=>r.step());B.forEach((b,i)=>b.lift=lerp(b.lift,i===hov?1:0,.2));},
+    hover(p){hov=B.findIndex(b=>Math.abs(p.x-b.x)<b.w/2&&Math.abs(p.y-b.y)<b.h/2);cv.style.cursor=hov>=0?'pointer':'default';},
+    down(p){this.hover(p);if(hov<0)return;tick();const b=B[hov];if(b.k==='b')startStep('basics',b.i);else openProject(PROJ[b.i].id);},
+    draw(){font(12,700);ctx.fillStyle='rgba(29,32,39,.42)';ctx.textAlign='left';labels.forEach(l=>ctx.fillText(l[0],l[1],l[2]));
+      ropes.forEach(r=>r.draw());
+      B.forEach(b=>{if(b.k==='b'){stepBlock(b,String(b.i+1).padStart(2,'0'),BASICS[b.i].name,BASICS[b.i].sub,bDone(b.i),b.i===nb,t);return;}
+        const p=PROJ[b.i],y=b.y-b.lift*3,x0=b.x-b.w/2;metal(x0,y-b.h/2,b.w,b.h,18,{sb:16+b.lift*10,so:8+b.lift*4});
+        drawIcon(p.id,b.x+b.w/2-48,y,b.h-34,70);
+        const lv=p.level;font(11,700);const tw=ctx.measureText(lv).width+14;rr(x0+16,y-b.h/2+16,tw,20,10);ctx.fillStyle=lv.startsWith('Adv')?'rgba(29,32,39,.85)':lv.startsWith('Inter')?rgba(CORAL,.9):'rgba(63,155,107,.85)';ctx.fill();ctx.fillStyle='#fff';ctx.textAlign='left';ctx.fillText(lv,x0+23,y-b.h/2+30);
+        font(19,700);ctx.fillStyle=INK;ctx.fillText(p.name,x0+18,y+12);font(12.5,500);ctx.fillStyle='rgba(29,32,39,.55)';ctx.fillText(p.sub,x0+18,y+31);
+        const pr=projProg(p.id),n=p.steps.length;rr(x0+18,y+b.h/2-24,120,5,3);ctx.fillStyle='rgba(0,0,0,.08)';ctx.fill();if(pr){rr(x0+18,y+b.h/2-24,120*pr/n,5,3);ctx.fillStyle=CORAL;ctx.fill();}font(11,600);ctx.fillStyle='rgba(29,32,39,.45)';ctx.fillText(`${pr}/${n}`,x0+146,y+b.h/2-19);
+        if(pr===n)drawCheck(x0+b.w-22,y-b.h/2+22);});
+      plugs(ropes);}};}
+function ProjectScene(id){const p=projOf(id);let t=0,hov=-1,mode=null,B=[],ropes=[];const n=p.steps.length;const dn=i=>!!state.done[id+'.'+i];
+  function place(){const m=portrait?2:3;if(m===mode)return;mode=m;B=p.steps.map((s,i)=>m===3?{i,x:200+(i%3)*300,y:80+((i/3)|0)*150,w:250,h:110,lift:0}:{i,x:175+(i%2)*310,y:75+((i/2)|0)*140,w:282,h:110,lift:0});ropes=chainRopes(B,dn);}
+  place();const nx=p.steps.findIndex((s,i)=>!dn(i));
+  return{enter(){const basicsLeft=BASICS.some((b,i)=>!state.done['b'+i]);ui({kicker:KICK(),title:p.title,msg:`${p.desc} <b>You’ll learn:</b> ${p.learn}`+(basicsLeft?' <br><span style="color:var(--coral)">Tip: do the four basics first — they teach the stitches used here.</span>':''),b1:{label:nx<0?'Replay from step 1':nx===0?'Start step 1':`Continue · ${p.steps[nx].name}`,fn:()=>startStep(id,Math.max(0,nx))},b2:{label:'Pattern card',fn:()=>patternCard(id)}});},
+    bounds(){const rows=Math.ceil(n/mode);return mode===2?{x:20,y:5,w:630,h:rows*140+20}:{x:40,y:10,w:920,h:Math.max(400,rows*150+10)};},
+    update(dt){t+=dt;place();ropes.forEach(r=>r.step());B.forEach((b,i)=>b.lift=lerp(b.lift,i===hov?1:0,.2));},
+    hover(q){hov=B.findIndex(b=>Math.abs(q.x-b.x)<b.w/2&&Math.abs(q.y-b.y)<b.h/2);cv.style.cursor=hov>=0?'pointer':'default';},
+    down(q){this.hover(q);if(hov>=0){tick();startStep(id,hov);}},
+    draw(){ropes.forEach(r=>r.draw());B.forEach(b=>stepBlock(b,String(b.i+1).padStart(2,'0'),p.steps[b.i].name,p.steps[b.i].sub,dn(b.i),b.i===nx,t));plugs(ropes);}};}
+function materials(){modal(`<span class="tag">Low-cost kit</span><h2>What you’ll need</h2><p>No sewing machine or expensive fabric required — every project can be sewn by hand.</p><ul><li><b>Fabric</b> — cotton or linen for dresses and shirts (old bedsheets and duvet covers are perfect), denim for jeans, wool or linen for a suit. Charity shops are full of usable fabric.</li><li><b>Thread</b> — polyester all-purpose; for jeans, a heavier “topstitch” thread in gold.</li><li><b>Hand needles</b> — “sharps” 7–9; a stronger needle and a thimble for denim.</li><li><b>Scissors</b> — sharp, used only for fabric.</li><li><b>Pins</b> — or clothes pegs / paper clips.</li><li><b>Chalk</b> — or a dry sliver of bar soap.</li><li><b>Pattern paper</b> — newspaper taped together.</li><li><b>Tape measure</b> — or string + a ruler.</li><li><b>Iron</b> — or a hot pan base, or pressing under heavy books overnight.</li></ul><div class="actions"><button class="primary" id="mok">Got it</button></div>`,m=>m.querySelector('#mok').onclick=closeModal);}
+function patternCard(id){const p=projOf(id),D=DR()[id],m=state.m;const fmt=q=>`${(+q.x).toFixed(1)} across, ${(+q.y).toFixed(1)} down`;const cap=s=>s[0].toUpperCase()+s.slice(1);
+  let h=`<span class="tag">Pattern card · ${p.level}</span><h2>${p.name}</h2><p>Bust/chest ${m.bust} · Waist ${m.waist} · Hips ${m.hip} · Length ${m.length} · Arm ${m.arm} · Outseam ${m.outseam} cm</p><p>Draw each piece on newspaper. Points are in cm — <b>across</b> from a straight reference line (the fold for “on fold” pieces, centre front for the rest) and <b>down</b> from the top. Join them in order: straight edges with a ruler, curves freehand.</p>`;
+  Object.values(D).filter(v=>v&&v.edges).forEach(pc=>{h+=`<h3>${pc.name} <small style="color:var(--muted);font-weight:500">· ${pc.cut}</small></h3><table>`;pc.edges.forEach((e,i)=>{if(i===0)h+=`<tr><td>Start</td><td>${fmt(e.a)}</td></tr>`;h+=`<tr><td>${cap(e.name)}${e.kind==='curve'?' (curve)':''} to</td><td>${fmt(e.b)}</td></tr>`;});h+='</table>';});
+  if(D.pocket)h+=`<h3>Back pocket <small style="color:var(--muted);font-weight:500">· Cut 2</small></h3><p>15 cm wide, 13.5 cm down each side, with a point 16 cm down in the middle.</p>`;
+  h+=`<p>${p.cardNote||''} 1.5 cm seam allowance is included on seams, plus 3 cm for hems.</p><h3>Order of work</h3><ol>${p.steps.filter(s=>!/^Wear/.test(s.name)).map(s=>`<li>${s.name} — ${s.sub}</li>`).join('')}</ol><div class="actions"><button id="mp">Print</button><button class="primary" id="mc">Close</button></div>`;
+  modal(h,M=>{M.querySelector('#mc').onclick=closeModal;M.querySelector('#mp').onclick=()=>window.print();});}
+
+// ═════════════════════════ PROJECT STEPS ═════════════════════════
+// ───────── pattern & grain
+function LayoutScene(id,key){const pc=DR()[id][key],F=fabricLayout(pc),k=F.k,poly=pc.poly,c=centroid(poly),bb=pc.bb;const target=F.toW(c);const pw=bb.w*k;
+  let ang=.42,pos=P(Math.min(F.right+pw/2+50,1000-pw*.4),target.y+30),drag=null,off=P(0,0),phase='pick',pinsT=-1,t=0;const startX=pos.x;
+  const toWorld=q=>{const r=rot(P((q.x-c.x)*k,(q.y-c.y)*k),ang);return P(pos.x+r.x,pos.y+r.y);};
+  const knob=()=>toWorld(P(c.x,bb.y0-9));
+  const pins=[];for(let i=0;i<poly.length;i+=Math.max(1,Math.floor(poly.length/6)))pins.push(P(lerp(poly[i].x,c.x,.15),lerp(poly[i].y,c.y,.15)));
+  const foldTxt=pc.onFold?'push the <b>place-on-fold</b> edge right against the fold':'keep it a few cm in from the fold — this piece is <b>“Cut 2”</b>, so the doubled fabric gives you a mirror-image pair';
+  function uiPlace(){ui({kicker:KICK(),title:'Line up the <em>grain</em>.',msg:`Drag the paper pattern onto the fabric. Turn it with the knob until the <b>grain arrow</b> runs straight up and down, then ${foldTxt}.`,b2:{label:'Restart',fn:replay}});}
+  return{enter(){ui({kicker:KICK(),title:'Choose your <em>fabric</em>.',msg:projOf(id).fab==='denim'?'Denim is a tough twill weave. Wash it twice before cutting — it shrinks a lot.':projOf(id).fab==='suit'?'Wool, linen or a firm cotton all tailor well. Steam-press it first so it won’t shrink under the iron later.':'Woven cotton or linen is easiest — it doesn’t slip or stretch. Old bedsheets work well. Wash and iron it first so it won’t shrink later.',extra:swatches(id),b1:{label:'Use this fabric',fn:()=>{phase='place';uiPlace();}}});},
+    bounds(){return phase==='pick'?{x:F.fx-40,y:F.fy-30,w:F.fw+80,h:F.fh+60}:{x:F.fx-40,y:0,w:Math.max(F.fw+80,startX+pw*.65-F.fx+40),h:H};},
+    update(dt){t+=dt;if(phase==='place'&&!drag){if(Math.abs(ang)<.07&&Math.abs(pos.x-target.x)<GR(14)&&Math.abs(pos.y-target.y)<130){ang=lerp(ang,0,.25);pos=P(lerp(pos.x,target.x,.25),lerp(pos.y,target.y,.25));if(Math.abs(ang)<.002&&dist(pos,target)<.6){ang=0;pos=P(target.x,target.y);phase='pinned';pinsT=0;pop();setTimeout(()=>DONE('The grain arrow follows the lengthwise threads — the strongest direction — so the garment hangs straight instead of twisting. Next: trace around it with chalk (or a sliver of soap) and cut.','Pinned on the <em>straight grain</em>.'),900);}}}if(pinsT>=0)pinsT+=dt;},
+    get dbg(){return{knob:knob(),pos,target,ang};},
+    down(p){if(phase!=='place')return;if(dist(p,knob())<GR(20)){drag='rot';return;}if(inPoly(p,poly.map(toWorld))){drag='move';off=P(pos.x-p.x,pos.y-p.y);}},
+    move(p){if(drag==='move')pos=P(p.x+off.x,p.y+off.y);else if(drag==='rot'){ang=Math.atan2(p.y-pos.y,p.x-pos.x)+Math.PI/2;if(ang>Math.PI)ang-=Math.PI*2;}},
+    up(){if(!drag)return;drag=null;const a=Math.abs(ang)*180/Math.PI;if(phase==='place'){if(a>4)setMsg(`The grain arrow is <b>${a.toFixed(0)}°</b> off. Turn the knob until it runs straight down, parallel to the fold.`);else if(Math.abs(pos.x-target.x)>=GR(14))setMsg(pc.onFold?'Grain looks straight. Now slide the <b>place-on-fold</b> bracket right against the fold.':'Grain looks straight. Slide it so it sits about <b>3 cm</b> from the fold — the glowing outline shows the spot.');}},
+    hover(p){if(phase==='place')cv.style.cursor=dist(p,knob())<GR(20)?'grab':inPoly(p,poly.map(toWorld))?'move':'default';},
+    draw(){const hex=fabOf(id);drawFolded(F,hex);if(phase==='pick')return;
+      if(!pc.onFold&&phase==='place'){ctx.save();ctx.globalAlpha=.3+.2*Math.sin(t*3);ctx.setLineDash([5,5]);ctx.strokeStyle=chalkCol(hex);ctx.lineWidth=1.5;path(poly.map(F.toW));ctx.stroke();ctx.restore();}
+      const wp=poly.map(toWorld);ctx.save();path(wp);shadow(10,6,.2);ctx.fillStyle='rgba(248,244,236,.93)';ctx.fill();noShadow();ctx.strokeStyle='rgba(29,32,39,.55)';ctx.lineWidth=1.2;ctx.stroke();ctx.restore();
+      const fs=clamp(bb.h*.032,1.6,3);ctx.save();ctx.translate(pos.x,pos.y);ctx.rotate(ang);ctx.scale(k,k);ctx.translate(-c.x,-c.y);ctx.lineWidth=.3;ctx.strokeStyle='#2c2f37';ctx.fillStyle='#2c2f37';
+      const gx=c.x+1.5,gy0=bb.y0+bb.h*.25,gy1=bb.y1-bb.h*.14;ctx.beginPath();ctx.moveTo(gx,gy0);ctx.lineTo(gx,gy1);ctx.stroke();[[gy0,1],[gy1,-1]].forEach(([y,s])=>{ctx.beginPath();ctx.moveTo(gx,y);ctx.lineTo(gx-1.2,y+s*2.8);ctx.lineTo(gx+1.2,y+s*2.8);ctx.closePath();ctx.fill();});
+      ctx.save();ctx.translate(gx-1.3,(gy0+gy1)/2);ctx.rotate(-Math.PI/2);ctx.font=`600 ${fs*.7}px "Inter Tight",sans-serif`;ctx.textAlign='center';ctx.fillText('GRAINLINE',0,0);ctx.restore();
+      if(pc.onFold){const by0=bb.y0+bb.h*.12,by1=bb.y1-bb.h*.1;ctx.beginPath();ctx.moveTo(.5,by0);ctx.lineTo(2.6,by0);ctx.lineTo(2.6,by1);ctx.lineTo(.5,by1);ctx.stroke();[by0,by1].forEach(y=>{ctx.beginPath();ctx.moveTo(.4,y);ctx.lineTo(1.7,y-1);ctx.lineTo(1.7,y+1);ctx.closePath();ctx.fill();});ctx.save();ctx.translate(4.2,(by0+by1)/2);ctx.rotate(-Math.PI/2);ctx.font=`600 ${fs*.65}px "Inter Tight",sans-serif`;ctx.textAlign='center';ctx.fillText('PLACE ON FOLD',0,0);ctx.restore();}
+      const tx=c.x+3,ty=bb.y0+bb.h*.22;ctx.font=`700 ${fs}px "Inter Tight",sans-serif`;ctx.textAlign='left';ctx.fillText(pc.name.toUpperCase(),tx,ty);ctx.font=`500 ${fs*.6}px "Inter Tight",sans-serif`;ctx.fillText(pc.cut.split(' (')[0],tx,ty+fs*.9);ctx.restore();
+      if(phase==='place'){const kn=knob(),tp=toWorld(P(c.x,bb.y0-1));ctx.save();ctx.strokeStyle='rgba(29,32,39,.35)';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(tp.x,tp.y);ctx.lineTo(kn.x,kn.y);ctx.stroke();ctx.restore();metal(kn.x-14,kn.y-14,28,28,14,{sb:8,so:4});dot(kn,4,CORAL);if(!drag&&t<8)ring(kn,t,16);
+        const a=Math.abs(ang)*180/Math.PI;pillText(kn.x+50,kn.y,a<.5?'0°':`${a.toFixed(0)}°`,'#fff',a<4?'#2f7d55':CORAL,12);
+        if(pc.onFold){ctx.save();ctx.globalAlpha=.25+.2*Math.sin(t*3);ctx.strokeStyle='#fff';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(F.fx+1.5,F.rect[0].y+6);ctx.lineTo(F.fx+1.5,F.rect[3].y-6);ctx.stroke();ctx.restore();}}
+      if(pinsT>=0)pins.forEach((pp,i)=>drawPin(toWorld(pp),-.5+i*.13,clamp(pinsT*3-i*.5,0,1)));}};}
+
+// ───────── cutting (Pondo-style scissors)
+function CutScene(id,key){const pc=DR()[id][key],F=fabricLayout(pc),k=F.k,E=pc.edges;let ei=0,start=F.toW(E[0].a),end=null,mid=null,midMoved=false,drag=null,cutter=null,phase='cut',t=0,scrapT=-1,rev=-1,center=0;const cuts=[],first=start;
+  const tgt=e=>e.kind==='line'?[F.toW(e.a),F.toW(e.b)]:sampleQuad(F.toW(e.a),F.toW(e.c),F.toW(e.b),24);
+  const midPt=()=>mid||P((start.x+end.x)/2,(start.y+end.y)/2);
+  const userPts=()=>{if(!end)return[];const m=midPt();const cc=P(2*m.x-(start.x+end.x)/2,2*m.y-(start.y+end.y)/2);return sampleQuad(start,cc,end,26);};
+  function uiEdge(m){const e=E[ei];ui({kicker:KICK(),title:`Cut the <em>${e.name}</em>.`,msg:m||(e.kind==='curve'?'Curves: place the end point first, then drag the <b>middle handle</b> to bend your cut onto the chalk line. Press <b>Cut</b> when it matches.':(ei===0?'Both layers are cut at once. Drag from the glowing point to where the chalk line ends, adjust the handles, then press <b>Cut</b>.':'Drag from the glowing point along the chalk line, then press <b>Cut</b>.')),b1:{label:'Cut',disabled:!end,fn:doCut},b2:{label:'Restart',fn:replay}});}
+  function evaluate(){const up=userPts(),tg=tgt(E[ei]);let s=0;up.forEach(p=>s+=distPoly(p,tg));return{mean:s/up.length/k,endErr:dist(end,tg[tg.length-1])/k,up};}
+  function doCut(){if(!end||cutter)return;const ev=evaluate();if(ev.endErr>1.3||ev.mean>.75){bad();setMsg(`Not lined up yet — about <b>${Math.max(ev.mean,ev.endErr).toFixed(1)} cm</b> off. Move the handles onto the chalk line. Measure twice, cut once!`);return;}
+    const up=ev.up;if(ei===E.length-1)up[up.length-1]=pc.onFold?P(F.fx,up[up.length-1].y):P(first.x,first.y);
+    b1On(false);cutter=new Cutter(up,()=>{cutter=null;cuts.push(up);float(up[up.length-1].x+20,up[up.length-1].y-20,`${Math.round(ev.mean*10)} mm off ${ev.mean<.25?'★★★':ev.mean<.5?'★★☆':'★☆☆'}`,ev.mean<.5?'#2f7d55':CORAL);start=up[up.length-1];end=null;mid=null;midMoved=false;ei++;if(ei<E.length)uiEdge();else finish();},null,300);}
+  function piecePoly(){const pts=[first];cuts.forEach(c=>c.forEach((p,i)=>{if(i)pts.push(p);}));if(!pc.onFold)pts.pop();return pts;}
+  function finish(){phase='scrap';scrapT=0;state.cuts[id+'.'+key]=piecePoly().map(F.toCm).map(p=>P(+p.x.toFixed(2),+p.y.toFixed(2)));save();ui({kicker:KICK(),title:'Lift away the <em>scraps</em>.',msg:'Keep the scraps — they’re perfect for practising stitches.'});}
+  const pb=()=>bbox(piecePoly());
+  return{enter(){uiEdge();},
+    get dbg(){return{start,ei,tg:ei<E.length?tgt(E[ei]):null};},
+    bounds(){const y=F.fy-25,h=F.fh+50;if(rev<0)return{x:F.fx-40,y,w:F.fw+80,h};if(pc.onFold){const hw=(F.toW(P(pc.bb.x1,0)).x-F.fx);return{x:500-hw-40,y,w:hw*2+80,h};}const b=pb();return{x:b.x0-40,y,w:b.w*2+110,h};},
+    update(dt){t+=dt;if(cutter)cutter.update(dt);if(scrapT>=0&&scrapT<1){scrapT=Math.min(1,scrapT+dt*.9);if(scrapT>=1){rev=0;snip(.4);}}
+      if(rev>=0&&rev<1){rev=Math.min(1,rev+dt*.8);if(rev>=1)DONE(pc.onFold?'Unfold, and there it is — both halves identical because you cut through the fold.':'Two layers cut at once give you a <b>mirror-image pair</b>: one for the left side, one for the right. Chalk an X on the wrong side of each so you never mix them up.',`Your ${pc.name.toLowerCase()} is <em>cut</em>.`);}if(rev>=1&&pc.onFold)center=Math.min(1,center+dt*1.2);},
+    down(p){if(phase!=='cut'||cutter)return;if(end&&dist(p,end)<GR(18)){drag='end';return;}if(end&&dist(p,midPt())<GR(16)){drag='mid';return;}end=P(p.x,p.y);mid=null;midMoved=false;drag='end';},
+    move(p){if(drag==='end'){end=P(p.x,p.y);const tg=tgt(E[ei]),te=tg[tg.length-1];if(dist(end,te)<5)end=P(te.x,te.y);if(!midMoved)mid=null;}else if(drag==='mid'){mid=P(p.x,p.y);midMoved=true;}},
+    up(){if(drag){drag=null;b1On(!!end&&!cutter);}},
+    hover(p){cv.style.cursor=end&&(dist(p,end)<GR(18)||dist(p,midPt())<GR(16))?'grab':'crosshair';},
+    draw(){const hex=fabOf(id),r=F.rect;
+      if(phase==='cut'){drawFolded(F,hex);E.forEach((e,i)=>{if(i>=ei)chalk(tgt(e),2,chalkCol(hex));});cuts.forEach(c=>slit(c));if(cutter)cutter.drawSlit();
+        if(!cutter){ring(start,t);if(end){dashed(userPts());if(E[ei].kind==='curve'||midMoved)midHandle(midPt());handle(start,false);handle(end,drag==='end');}}
+        if(cutter)cutter.drawTool();return;}
+      const pp=piecePoly();
+      if(scrapT<1){const e=easeIO(scrapT);ctx.save();ctx.translate(e*260,e*30);ctx.rotate(e*.08);ctx.globalAlpha=1-e;ctx.beginPath();path(r);pp.slice().reverse().forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();shadow(16,8,.2);ctx.fillStyle=weave(hex);ctx.fill('evenodd');noShadow();ctx.restore();}
+      if(pc.onFold){const dx=center*(500-F.fx);ctx.save();ctx.translate(dx,0);if(rev>=0){const e=easeIO(rev);ctx.save();ctx.translate(F.fx,0);ctx.scale(-e,1);ctx.translate(-F.fx,0);cloth(pp,rev<.5?shade(hex,.12):hex,{thick:2});ctx.restore();}cloth(pp,hex,{thick:2});ctx.restore();}
+      else{if(rev>=0){const b=bbox(pp),e=easeIO(rev),dx=e*(b.w+30),cx=(b.x0+b.x1)/2;ctx.save();ctx.translate(dx,0);ctx.translate(cx,0);ctx.scale(1-2*e,1);ctx.translate(-cx,0);cloth(pp,e<.5?shade(hex,-.08):hex,{thick:2});ctx.restore();}cloth(pp,hex,{thick:2});}}};}
+
+// ───────── seams (stack, sew, repeat, press)
+function SeamsScene(id){const D=DR()[id],pc=D.front;const polys=fullPolys(id,'front');const bb=bbox(polys.flat());const kk=Math.min(5.4,520/bb.h,330/bb.w);const top=(H-bb.h*kk)/2-bb.y0*kk;
+  const toS=(p,cx)=>P(cx+p.x*kk,top+p.y*kk);let phase='stack',t=0,flipT=-1,cT=0,st=null,ffT=-1,iron=null;
+  const seamsCm=[];pc.seams.forEach(nm=>{const e=pc.edges.find(e=>e.name===nm);const s=insetEdge(e,pc.poly);seamsCm.push(s,s.map(mxP));});
+  const seams=cx=>seamsCm.map(s=>s.map(p=>toS(p,cx)));const hw=Math.max(-bb.x0,bb.x1)*kk;
+  const hex=()=>fabOf(id),wrong=()=>shade(fabOf(id),lum(fabOf(id))>.6?-.08:.35);
+  const A=P(240,300),Bp=P(760,300);
+  function startShoulder(){phase='shoulder';st=Stitcher({a:A,b:Bp,pxcm:70,rule:'back',guided:false,L:.7,tolOff:.3,onError:m=>setMsg(m),onDone:s=>{float(500,240,'★'.repeat(s.stars)+'☆'.repeat(3-s.stars),CORAL);setTimeout(()=>{phase='ff';ffT=0;ui({kicker:KICK(),title:'Same for the <em>other seams</em>.',msg:'Repeat along the second shoulder and both side seams — 1.5 cm in from the edge. Finish each seam with two tiny stitches on the spot.',b2:{label:'Restart',fn:replay}});},800);}});
+    ui({kicker:KICK(),title:'Backstitch the <em>shoulder seam</em>.',msg:'Sew along the chalk line, <b>1.5 cm</b> in from the edge — that’s the seam allowance. Up one stitch ahead (~7 mm), back down into the last one.',b2:{label:'Restart',fn:replay}});}
+  return{enter(){ui({kicker:KICK(),title:'Pin <em>right sides together</em>.',msg:'The right side is the “good” side of the fabric. Face to face, the seams end up hidden <b>inside</b>.',b1:{label:'Flip the front onto the back',fn:()=>{flipT=0;b1On(false);}},b2:{label:'Restart',fn:replay}});},
+    bounds(){const b={y:top+bb.y0*kk-20,h:bb.h*kk+50};if(phase==='shoulder')return{x:160,y:150,w:680,h:360};if(phase==='stack'&&cT<=0)return{...b,x:280-hw-20,w:440+hw*2+40};if(phase==='stack')return{...b,x:500-hw-140,w:hw*2+280};return{...b,x:500-hw-30,w:Math.max(hw*2+60,hw+450)};},
+    update(dt){t+=dt;if(flipT>=0&&flipT<1){flipT=Math.min(1,flipT+dt*.8);if(flipT>=1){pop();setTimeout(()=>{cT=.0001;},200);}}if(cT>0&&cT<1){cT=Math.min(1,cT+dt*1.2);if(cT>=1)ui({kicker:KICK(),title:'Pinned and ready.',msg:'Pins go across the seam line, so you can sew right up to each one and pull it out as you reach it.',b1:{label:'Sew the shoulder →',fn:startShoulder},b2:{label:'Restart',fn:replay}});}
+      if(st&&phase==='shoulder')st.update(dt);
+      if(phase==='ff'){const pv=ffT;ffT+=dt*.45;if(Math.floor(ffT*30)!==Math.floor(pv*30)&&ffT<1)tick();if(ffT>=1.15){phase='press';iron=Iron(seams(500).flatMap(s=>resample(s,16)),()=>{phase='done';DONE('Every seam sewn and pressed. Pressing as you go is the secret of neat home sewing.','<em>Press</em> the seams.');},P(500+hw+90,top+bb.y1*kk-40));ui({kicker:KICK(),title:'<em>Press</em> the seams.',msg:'Drag the iron along every seam. No iron? A hot pan base or a night under heavy books works too.',b2:{label:'Restart',fn:replay}});}}
+      if(iron)iron.update(dt);},
+    get dbg(){return{iron:iron&&iron.pos};},down(p){if(phase==='shoulder')st.down(p);if(iron)iron.down(p);},move(p){if(phase==='shoulder')st.move(p);if(iron)iron.move(p);},up(){if(iron)iron.up();},
+    hover(p){if(phase==='shoulder')st.move(p);if(iron)iron.hover(p);},
+    draw(){if(phase==='shoulder'){const sw=swatch(170,190,660,300);ctx.save();ctx.translate(0,-6);cloth(sw,shade(hex(),-.05),{thick:2});ctx.restore();cloth(sw,wrong(),{thick:2,shadow:false});chalk([A,Bp],2,chalkCol(wrong()));
+        ctx.save();ctx.strokeStyle='rgba(29,32,39,.55)';ctx.fillStyle='rgba(29,32,39,.55)';ctx.lineWidth=1.2;const x=205;ctx.beginPath();ctx.moveTo(x,192);ctx.lineTo(x,A.y);ctx.stroke();[192,A.y].forEach((y,i)=>{ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x-4,y+(i?-6:6));ctx.lineTo(x+4,y+(i?-6:6));ctx.closePath();ctx.fill();});font(11,700);ctx.save();ctx.translate(x-8,(192+A.y)/2);ctx.rotate(-Math.PI/2);ctx.textAlign='center';ctx.fillText('1.5 cm',0,0);ctx.restore();ctx.restore();
+        font(11,600);ctx.fillStyle=lum(wrong())>.6?'rgba(0,0,0,.35)':'rgba(255,255,255,.6)';ctx.textAlign='center';ctx.fillText('SHOULDER EDGE ↑',500,212);st.draw(t);return;}
+      const fl=flipT<0?0:easeIO(flipT),cxF=lerp(280,720,fl),sx=Math.cos(fl*Math.PI),cc=easeIO(cT);const cxB=lerp(720,500,cc),cxF2=flipT>=1?cxB:cxF;
+      const drawP=(cx,col,scx=1,dy=0)=>{ctx.save();ctx.translate(cx,dy);ctx.scale(scx,1);ctx.translate(-cx,0);polys.forEach(pl=>cloth(pl.map(p=>toS(p,cx)),col,{thick:2}));ctx.restore();};
+      drawP(cxB,hex());if(flipT<0){font(12,700);ctx.fillStyle='rgba(29,32,39,.4)';ctx.textAlign='center';ctx.fillText('BACK',cxB,top+bb.y1*kk+22);ctx.fillText('FRONT',280,top+bb.y1*kk+22);}
+      drawP(cxF2-3,flipT>=1||sx<0?wrong():hex(),flipT>=1?1:Math.max(.02,Math.abs(sx)),-3);
+      if(flipT>=1&&cT>=1&&phase==='stack')seams(cxB).forEach((s,i)=>{const m=s[(s.length/2)|0];drawPin(m,i%2?.4:-.4,1);});
+      if(phase!=='stack'){seams(500).forEach((s,i)=>{const tt=clamp((phase==='ff'?ffT:2)*1.6-i*.15,0,1);if(tt>0){const n=Math.max(2,Math.ceil(s.length*tt));ctx.save();ctx.translate(-3,-3);dashed(s.slice(0,n),THREAD,2,[4,2.5]);ctx.restore();}});}
+      if(iron)iron.draw(t);}};}
+
+// ───────── hems
+function HemScene(id){const pr=projOf(id).fab;const cfg=pr==='shirt'?{f:[.5,.5],col:THREAD,note:'Shirt hems are narrow: 5 mm, then 5 mm again.'}:pr==='denim'?{f:[1,1.5],col:GOLD,note:'Denim is thick — hammer the folds flat at the side seams before stitching.'}:{f:[1,2],col:THREAD,note:'This first small fold hides the raw edge so it can’t fray.'};
+  const X0=150,X1=850,Y0=130,YB=500,kk=60;let phase='f1',f=0,drag=false,t=0,st=null,sy=0;const [v1,v2]=cfg.f;const tgt={f1:[v1,.25],f2:[v2,.3]};
+  const hex=()=>fabOf(id),wrong=()=>shade(fabOf(id),lum(fabOf(id))>.6?-.08:.35);
+  function uiF(){ui({kicker:KICK(),title:phase==='f1'?`Fold the hem up <em>${v1} cm</em>.`:`Fold it again, <em>${v2} cm</em>.`,msg:phase==='f1'?`With the wrong side facing you, drag the bottom edge up. ${cfg.note}`:'Fold up again. This double fold encloses the raw edge completely — a clean, durable hem. Press each fold.',b2:{label:'Restart',fn:replay}});}
+  function startStitch(){phase='stitch';sy=YB-v2*kk+12;st=Stitcher({a:P(200,sy),b:P(800,sy),pxcm:kk,rule:'running',guided:false,L:.7,tolOff:.28,color:cfg.col,onError:m=>setMsg(m),onDone:s=>{float(500,240,'★'.repeat(s.stars)+'☆'.repeat(3-s.stars),CORAL);setTimeout(()=>DONE(pr==='denim'?'Hemmed with gold topstitching, just like shop-bought jeans.':'Hemmed! Finish necklines and armholes the same way: fold 0.5 cm twice — snip little notches into curves first (not past the fold line) so they lie flat.','Stitch the <em>hem</em>.'),700);}});
+    ui({kicker:KICK(),title:'Stitch the <em>hem</em>.',msg:pr==='denim'?'Topstitch along the top of the fold with the gold thread — stitches show on the outside, so keep them even.':'Running stitch along the top of the fold, 2 mm below its edge. Pick up only a thread or two of the outer fabric so it barely shows.',b2:{label:'Restart',fn:replay}});}
+  return{enter(){uiF();},bounds(){return{x:80,y:110,w:790,h:410};},
+    update(dt){t+=dt;if(!drag&&phase.startsWith('f'))f=lerp(f,0,.18);if(st)st.update(dt);},
+    down(p){if(phase==='stitch'){st.down(p);return;}if(tgt[phase]&&p.y>YB-200){drag=true;this.move(p);}},
+    move(p){if(phase==='stitch'){st.move(p);return;}if(drag)f=clamp((YB+20-p.y)/kk,0,4);},
+    hover(p){if(phase==='stitch')st.move(p);else cv.style.cursor=p.y>YB-200?'ns-resize':'default';},
+    up(){if(!drag)return;drag=false;if(!tgt[phase])return;const [v,tol]=tgt[phase];if(Math.abs(f-v)<=tol){if(phase==='f1'){phase='f2';f=0;pop();float(500,YB-90,`${v} cm ✓`,'#2f7d55');uiF();}else{f=0;pop();float(500,YB-150,`${v} cm ✓`,'#2f7d55');phase='s';setTimeout(startStitch,600);}}else{bad();setMsg(`That’s <b>${f.toFixed(1)} cm</b> — aim for ${v} cm. Even folds give an even hem.`);}},
+    draw(){const r=[P(X0,Y0),P(X1,Y0),P(X1,YB),P(X0,YB)];cloth(r,wrong(),{thick:2});
+      metal(X0-56,YB-250,40,262,8,{sb:8,so:4,sa:.18});for(let i=0;i<=40;i++){const y=YB-i*kk/10,h=i%10===0?14:i%5===0?9:5;ctx.fillStyle='rgba(29,32,39,.55)';ctx.fillRect(X0-18-h,y-.5,h,1);if(i%10===0){font(10,600);ctx.textAlign='right';ctx.fillText(i/10,X0-36,y+3.5);}}
+      const band=(h,col,lineY)=>{const y=YB-h*kk;ctx.save();shadow(8,-3,.22);ctx.fillStyle=weave(col);ctx.fillRect(X0,y,X1-X0,YB-y);noShadow();ctx.fillStyle='rgba(255,255,255,.08)';ctx.fillRect(X0,y,X1-X0,2);ctx.restore();if(lineY){ctx.save();ctx.setLineDash([2,3]);ctx.strokeStyle='rgba(0,0,0,.25)';ctx.beginPath();ctx.moveTo(X0,lineY);ctx.lineTo(X1,lineY);ctx.stroke();ctx.restore();}};
+      const guide=v=>{ctx.save();ctx.globalAlpha=.4+.2*Math.sin(t*3);dashed([P(X0,YB-v*kk),P(X1,YB-v*kk)],CORAL,1.5);ctx.restore();};
+      const inner=shade(hex(),lum(hex())>.6?-.03:.05),outer=shade(hex(),lum(hex())>.6?-.12:.26);
+      if(phase==='f1'){if(f>.02)band(f,inner);guide(v1);}
+      else if(phase==='f2'){band(v1,inner);if(f>.02)band(f,outer,YB-f*kk+v1*kk);guide(v2);}
+      else band(v2,outer,YB-v2*kk+v1*kk);
+      if(phase.startsWith('f')){if(drag||f>.05)pillText(X1-60,YB-f*kk-18,`${f.toFixed(1)} cm`,'#fff',Math.abs(f-tgt[phase][0])<=tgt[phase][1]?'#2f7d55':INK,13);else{ctx.save();ctx.globalAlpha=.6+.3*Math.sin(t*3);font(12,600);ctx.fillStyle=CORAL;ctx.textAlign='center';ctx.fillText('↑ drag the bottom edge up',500,YB-14);ctx.restore();}}
+      if(phase==='stitch'){chalk([P(200,sy),P(800,sy)],1.6,chalkCol(outer));st.draw(t);}
+      font(11,600);ctx.fillStyle=lum(wrong())>.6?'rgba(0,0,0,.35)':'rgba(255,255,255,.5)';ctx.textAlign='center';ctx.fillText('WRONG SIDE · BOTTOM EDGE',500,Y0+24);}};}
+
+// ───────── gathering
+function GatherScene(id){const D=DR()[id];const W0=2*D.sw,Wt=2*D.qW;const k=Math.min(6,700/W0),cx=500,ty=300,hemY=560;let Wc=W0,phase='sew',t=0,sewT=-1,drag=false,st=null;const hex=()=>fabOf(id);
+  const bod=fullH(cutPoly(id,'bodice')).map(p=>P(cx+p.x*k,ty-4-(D.wy-p.y)*k));
+  function skirt(){const pts=[],n=48,amp=(1-Wc/W0)*7,hw=Wc*k/2,bw=W0*k/2*.96;for(let i=0;i<=n;i++)pts.push(P(cx-hw+2*hw*i/n,ty+Math.sin(i*Math.PI*.9)*amp));pts.push(P(cx+bw,hemY));for(let i=n;i>=0;i--)pts.push(P(cx-bw+2*bw*i/n,hemY+Math.sin(i*1.3)*amp*.4));return pts;}
+  function uiSew(){ui({kicker:KICK(),title:'Two rows of <em>long stitches</em>.',msg:'Gathering starts with two rows of long running stitches (about 1 cm) along the top edge — <b>no knot at the end</b>, leave long thread tails.',b1:{label:'Sew the gathering rows',fn:()=>{sewT=0;b1On(false);}},b2:{label:'Restart',fn:replay}});}
+  return{enter(){uiSew();},
+    bounds(){return phase==='join'?{x:160,y:150,w:680,h:360}:{x:cx-W0*k/2-50,y:Math.min(...bod.map(p=>p.y))-20,w:W0*k+100,h:hemY+30-Math.min(...bod.map(p=>p.y))};},
+    update(dt){t+=dt;if(sewT>=0&&sewT<1){const pv=sewT;sewT=Math.min(1,sewT+dt*.6);if(Math.floor(sewT*20)!==Math.floor(pv*20))tick();if(sewT>=1){phase='pull';ui({kicker:KICK(),title:'Pull to <em>gather</em>.',msg:`Hold the thread tails and slide the fabric along them. Gather the skirt from <b>${W0.toFixed(0)} cm</b> down to the bodice waist: <b>${Wt.toFixed(0)} cm</b>.`,b2:{label:'Restart',fn:replay}});}}if(st)st.update(dt);},
+    down(p){if(phase==='join'){st.down(p);return;}if(phase==='pull'&&Math.abs(p.y-ty)<GR(70))drag=true;},
+    move(p){if(phase==='join'){st.move(p);return;}if(drag)Wc=clamp(2*Math.abs(p.x-cx)/k-1,Wt*.75,W0);},
+    hover(p){if(phase==='join')st.move(p);else if(phase==='pull')cv.style.cursor=Math.abs(p.y-ty)<GR(70)?'ew-resize':'default';},
+    up(){if(!drag)return;drag=false;if(Math.abs(Wc-Wt)<=Math.max(2.5,Wt*.04)){Wc=Wt;pop();float(cx,ty-40,'Matches the bodice ✓','#2f7d55');phase='matched';setTimeout(()=>ui({kicker:KICK(),title:'Spread the gathers <em>evenly</em>.',msg:'Wrap the tails around a pin to lock them, slide the gathers until they’re even, then pin the skirt to the bodice — right sides together.',b1:{label:'Stitch the waist seam →',fn:()=>{phase='join';st=Stitcher({a:P(240,300),b:P(760,300),pxcm:70,rule:'back',guided:false,L:.7,tolOff:.3,onError:m=>setMsg(m),onDone:s=>{float(500,240,'★'.repeat(s.stars)+'☆'.repeat(3-s.stars),CORAL);setTimeout(()=>DONE('Skirt joined. Pull out the gathering threads that show below the seam, and press the seam allowance up towards the bodice.','Gathered & <em>joined</em>.'),700);}});ui({kicker:KICK(),title:'Backstitch the <em>waist seam</em>.',msg:'Stitch 1.5 cm from the edge, just below the gathering rows so they stay hidden. Go slowly over the folds.',b2:{label:'Restart',fn:replay}});}},b2:{label:'Restart',fn:replay}}),600);}else{bad();setMsg(Wc>Wt?`Still <b>${(Wc-Wt).toFixed(0)} cm</b> too wide — keep gathering.`:`Too tight by <b>${(Wt-Wc).toFixed(0)} cm</b> — let a little out.`);}},
+    draw(){if(phase==='join'){const sw=swatch(170,190,660,300);ctx.save();ctx.translate(0,-6);cloth(sw,shade(hex(),-.05),{thick:2});ctx.restore();cloth(sw,shade(hex(),.3),{thick:2,shadow:false});ctx.save();path(sw);ctx.clip();for(let x=170;x<840;x+=9){ctx.fillStyle=x%18?'rgba(0,0,0,.08)':'rgba(255,255,255,.08)';ctx.fillRect(x,300,5,200);}ctx.restore();chalk([P(240,300),P(760,300)],2);st.draw(t);return;}
+      const sk=skirt();cloth(sk,hex(),{thick:2});const comp=1-Wc/W0;ctx.save();path(sk);ctx.clip();for(let i=0;i<34;i++){const u=i/33,x0=cx-Wc*k/2+Wc*k*u,x1=cx-W0*k/2*.96+W0*k*.96*u;const g=ctx.createLinearGradient(0,ty,0,hemY);g.addColorStop(0,i%2?`rgba(0,0,0,${.25*comp})`:`rgba(255,255,255,${.18*comp})`);g.addColorStop(1,'rgba(0,0,0,0)');ctx.strokeStyle=g;ctx.lineWidth=6;ctx.beginPath();ctx.moveTo(x0,ty);ctx.lineTo(x1,hemY);ctx.stroke();}ctx.restore();
+      cloth(bod,hex(),{thick:2});
+      if(sewT>=0){[8,15].forEach(dy=>{const hw=Wc*k/2,n=Math.ceil(Wc/1.0);for(let i=0;i<n*Math.min(1,sewT*1.05);i+=2){const x0=cx-hw+i*hw*2/n,x1=x0+hw*2/n;cable([P(x0,ty+dy),P(x1,ty+dy)],THREAD,2.4);}});}
+      if(phase==='pull'||phase==='matched'){[1,-1].forEach(s=>{const x=cx+s*(Wc*k/2+6);cable([P(x,ty+8),P(x+s*20,ty+30),P(x+s*14,ty+60)],THREAD,2.6);cable([P(x,ty+15),P(x+s*26,ty+40),P(x+s*22,ty+70)],THREAD,2.6);});
+        ctx.save();ctx.globalAlpha=.5+.3*Math.sin(t*3);[1,-1].forEach(s=>dashed([P(cx+s*Wt*k/2,ty-30),P(cx+s*Wt*k/2,ty+60)],CORAL,1.6));ctx.restore();
+        pillText(cx,ty+90,`${Wc.toFixed(0)} cm  →  ${Wt.toFixed(0)} cm`,'#fff',Math.abs(Wc-Wt)<=Math.max(2.5,Wt*.04)?'#2f7d55':INK,13);if(phase==='pull'&&!drag&&Wc===W0){ctx.save();ctx.globalAlpha=.7;font(12,600);ctx.fillStyle=CORAL;ctx.textAlign='center';ctx.fillText('↔ drag an end inwards',cx,ty+120);ctx.restore();}}}};}
+
+// ───────── darts
+function DartScene(id){const k=30,cx=500,by=560,ay=by-10*k,hw=1.5*k;const sw=swatch(200,220,600,380);let f=0,drag=false,sx=0,phase='fold',st=null,t=0;const hex=()=>fabOf(id),wrong=()=>shade(fabOf(id),.3);
+  return{enter(){ui({kicker:KICK(),title:'Fold the <em>dart</em>.',msg:'A dart is a stitched fold that takes away a wedge of fabric so the garment curves around the body. Drag the right chalk line across onto the left one.',b2:{label:'Restart',fn:replay}});},
+    bounds(){return{x:180,y:200,w:640,h:420};},
+    update(dt){t+=dt;if(!drag&&phase==='fold')f=lerp(f,0,.15);if(st)st.update(dt);},
+    down(p){if(phase==='stitch'){st.down(p);return;}if(phase==='fold'&&p.x>cx-10){drag=true;sx=p.x;}},
+    move(p){if(phase==='stitch'){st.move(p);return;}if(drag)f=clamp((sx-p.x)/(2*hw),0,1);},
+    hover(p){if(phase==='stitch')st.move(p);else cv.style.cursor=p.x>cx-10?'ew-resize':'default';},
+    up(){if(!drag)return;drag=false;if(f>.86){f=1;phase='stitch';pop();st=Stitcher({a:P(cx-hw,by),b:P(cx,ay),pxcm:k,rule:'back',guided:false,L:1,tolOff:.3,onError:m=>setMsg(m),onDone:()=>setTimeout(()=>DONE('Tie off at the point — don’t backstitch there or it puckers. Press the dart towards the centre. One dart each side, front and back.','Sew the <em>dart</em>.'),400)});ui({kicker:KICK(),title:'Stitch the <em>dart</em>.',msg:'Backstitch from the wide end to the point, right on the fold line. Taper off so the last stitches run along the very edge of the fold.',b2:{label:'Restart',fn:replay}});}else bad();},
+    draw(){cloth(sw,wrong(),{thick:2});const rx=cx+hw-2*hw*f;
+      if(f>0){ctx.save();path([P(cx-hw,by),P(cx,ay),P(rx,by)]);shadow(6,2,.25);ctx.fillStyle=weave(shade(hex(),.04));ctx.fill();noShadow();ctx.restore();}
+      const cc=chalkCol(wrong());chalk([P(cx-hw,by),P(cx,ay)],2,cc);chalk([P(rx,by),P(cx,ay)],2,cc);chalk([P(cx,ay-30),P(cx,ay+8)],1.4,cc);
+      if(phase==='fold'){if(f<.05&&!drag){ctx.save();ctx.globalAlpha=.6+.3*Math.sin(t*3);font(12,600);ctx.fillStyle=CORAL;ctx.textAlign='center';ctx.fillText('← drag this line over',cx+hw+70,by-40);ctx.restore();}pillText(cx,by+26,`${(3*(1-f)).toFixed(1)} cm wedge`,'#fff',INK,12);}
+      if(st)st.draw(t);}};}
+
+// ───────── align-and-attach (sleeves, pockets, interfacing)
+function AlignScene(o){let pos=P(o.start.x,o.start.y),ang=o.start.ang,drag=null,off=P(0,0),phase='place',t=0,anim=-1,iron=null,pinsT=-1;const mv=o.mover.pts,minY=Math.min(...mv.map(p=>p.y)),tg=o.target;
+  const toW=q=>{const r=rot(q,ang);return P(pos.x+r.x,pos.y+r.y)};const wp=()=>mv.map(toW);const knob=()=>toW(P(0,minY-28));
+  function locked(){phase='pinned';pinsT=0;pop();if(o.after==='stitch')setTimeout(()=>{anim=0;ui({kicker:KICK(),title:o.stitchTitle||$title.innerHTML,msg:o.stitchMsg||'Stitching…'});},600);else if(o.after==='iron'){iron=Iron(gridIn(wp(),20),()=>DONE(o.doneMsg,o.doneTitle),o.ironStart);ui({kicker:KICK(),title:o.ironTitle,msg:o.ironMsg,b2:{label:'Restart',fn:replay}});}}
+  return{enter(){ui({kicker:KICK(),title:o.title,msg:o.msg,b2:{label:'Restart',fn:replay}});},bounds:()=>o.bounds,
+    update(dt){t+=dt;if(phase==='place'&&!drag){if(Math.abs(ang-tg.ang)<.09&&dist(pos,tg)<GR(20)){ang=lerp(ang,tg.ang,.25);pos=P(lerp(pos.x,tg.x,.25),lerp(pos.y,tg.y,.25));if(Math.abs(ang-tg.ang)<.003&&dist(pos,tg)<.6){ang=tg.ang;pos=P(tg.x,tg.y);locked();}}}
+      if(pinsT>=0)pinsT+=dt;if(anim>=0&&anim<1){const pv=anim;anim=Math.min(1,anim+dt/1.8);if(Math.floor(pv*24)!==Math.floor(anim*24))tick();if(anim>=1)DONE(o.doneMsg,o.doneTitle);}if(iron)iron.update(dt);},
+    down(p){if(iron){iron.down(p);return;}if(phase!=='place')return;if(dist(p,knob())<GR(20)){drag='rot';return;}if(inPoly(p,wp())){drag='move';off=P(pos.x-p.x,pos.y-p.y);}},
+    move(p){if(iron){iron.move(p);return;}if(drag==='move')pos=P(p.x+off.x,p.y+off.y);else if(drag==='rot'){ang=Math.atan2(p.y-pos.y,p.x-pos.x)+Math.PI/2;if(ang>Math.PI)ang-=Math.PI*2;}},
+    up(){if(iron){iron.up();return;}if(drag&&phase==='place'){const da=Math.abs(ang-tg.ang)*180/Math.PI;if(da>5)setMsg(`Turn it with the knob — it’s <b>${da.toFixed(0)}°</b> off. ${o.hint||''}`);else if(dist(pos,tg)>=GR(20))setMsg(`Angle looks right — now slide it onto the dashed outline. ${o.hint||''}`);}drag=null;},
+    hover(p){if(iron)return iron.hover(p);if(phase==='place')cv.style.cursor=dist(p,knob())<GR(20)?'grab':inPoly(p,wp())?'move':'default';},
+    get dbg(){return{pos,ang,tg,knob:knob(),iron:iron&&iron.pos};},
+    draw(){o.drawBase(t);
+      if(phase==='place'){ctx.save();ctx.globalAlpha=.45+.3*Math.sin(t*3);ctx.setLineDash([5,5]);ctx.strokeStyle=CORAL;ctx.lineWidth=1.6;path(mv.map(q=>{const r=rot(q,tg.ang);return P(tg.x+r.x,tg.y+r.y);}));ctx.stroke();ctx.restore();}
+      cloth(wp(),o.mover.col,{thick:o.mover.thick??2,alpha:o.mover.alpha??1});if(o.mover.deco)o.mover.deco(toW);
+      if(o.marks&&phase==='place')o.marks.forEach(m=>{ring(m.base,t,10);dot(toW(m.local),4,CORAL,'#fff',1.5);});
+      if(phase==='place'){const kn=knob();metal(kn.x-14,kn.y-14,28,28,14,{sb:8,so:4});dot(kn,4,CORAL);if(!drag&&t<6)ring(kn,t,16);}
+      if(pinsT>=0&&o.pins)o.pins.forEach((q,i)=>drawPin(toW(q),-.5+i*.25,clamp(pinsT*3-i*.5,0,1)));
+      if(anim>=0&&o.path){const n=Math.max(2,Math.ceil(o.path.length*anim));dashed(o.path.slice(0,n),o.thread||THREAD,2.2,[5,3]);if(o.path2&&anim>.5){const n2=Math.max(2,Math.ceil(o.path2.length*(anim-.5)*2));dashed(o.path2.slice(0,n2),o.thread||THREAD,2.2,[5,3]);}}
+      if(iron)iron.draw(t);}};}
+function SleeveScene(id){const D=DR()[id],pc=D.front,f=cutPoly(id,'front'),sp=D.sp;const k=4.4,ox=300-pc.bb.x0*k*.3,oy=70;const M=p=>P(ox+p.x*k,oy+p.y*k);
+  const sv=fullH(cutPoly(id,'sleeve')).map(p=>P(p.x*k,p.y*k));const arm=edgePts(pc.edges.find(e=>e.name==='armhole'),20).map(M);const T=M(sp);const bx0=M(P(pc.bb.x0,0)).x;
+  return AlignScene({title:'Set the <em>sleeve</em>.',msg:'Match the dot at the top of the sleeve cap to the shoulder point, right sides together. Turn it with the knob until the sleeve fans out along the armhole.',hint:'',
+    drawBase:()=>{const hex=fabOf(id);cloth(f.map(M),hex,{thick:2});chalk(arm,2,chalkCol(hex));},
+    mover:{pts:sv,col:shade(fabOf(id),lum(fabOf(id))>.6?-.06:.3)},target:{x:T.x,y:T.y,ang:-1.15},start:{x:Math.min(880,T.x+380),y:T.y+260,ang:.3},marks:[{base:T,local:P(0,0)}],
+    pins:[P(0,4),P(sv[3].x*.8,sv[3].y*.8+4),P(-sv[3].x*.8,sv[3].y*.8+4)],after:'stitch',path:arm,stitchTitle:'Stitching the <em>armhole</em>.',stitchMsg:'Backstitch around the armhole, easing the slightly longer sleeve cap in as you go.',
+    doneMsg:id==='suit'?'Sleeve set flat — the beginner-friendly way. Tailors often set jacket sleeves “in the round” with a little steam to shrink the cap, but flat works well.':'Sleeve set flat — the easy “shirt method”. Next you’ll sew the side seam and sleeve seam in one go, cuff to hem.',doneTitle:'Sleeve <em>set</em>.',
+    bounds:{x:bx0-40,y:20,w:Math.max(640,Math.min(940,T.x+520)-bx0),h:600}});}
+function PocketScene(id){const D=DR().jeans,leg=cutPoly('jeans','front').map(mxP);const k=5,ox=520,oy=60;const M=p=>P(ox+p.x*k,oy+p.y*k);const pk=D.pocket,pc0=centroid(pk);const local=pk.map(p=>P((p.x-pc0.x)*k,(p.y-pc0.y)*k));
+  const cen=M(P(-(D.front.cx+1),9+pc0.y));const inset=[P(.5,0),P(.5,13.2),P(7.5,15.4),P(14.5,13.2),P(14.5,0)],inset2=[P(1.1,0),P(1.1,12.9),P(7.5,14.8),P(13.9,12.9),P(13.9,0)];const toT=q=>P(cen.x+(q.x-pc0.x)*k,cen.y+(q.y-pc0.y)*k);
+  return AlignScene({title:'Place the <em>back pocket</em>.',msg:'Back pockets sit about 8 cm below the waist, angled slightly towards the centre back. Drag the pocket onto the dashed outline.',
+    drawBase:()=>{const hex=fabOf(id);cloth(leg.map(M),hex,{thick:2});font(11,700);ctx.fillStyle=lum(hex)>.6?'rgba(0,0,0,.35)':'rgba(255,255,255,.5)';ctx.textAlign='center';ctx.fillText('BACK LEG',M(P(-D.front.cx,50)).x,M(P(0,50)).y);},
+    mover:{pts:local,col:fabOf(id),deco:toW=>{const a=[P(-6,-1),P(0,3),P(6,-1)].map(q=>toW(P(q.x*k,q.y*k)));ctx.save();ctx.strokeStyle=GOLD;ctx.lineWidth=1.2;ctx.setLineDash([3,2]);path(a,false);ctx.stroke();ctx.restore();}},target:{x:cen.x,y:cen.y,ang:.05},start:{x:cen.x-170,y:cen.y+260,ang:-.4},
+    pins:[P(-local[1].x*.8,-20),P(local[1].x*.8,-20)],after:'stitch',path:resample(inset.map(toT),6),path2:resample(inset2.map(toT),6),thread:GOLD,stitchTitle:'Double <em>topstitching</em>.',stitchMsg:'Two rows of gold topstitching, 6 mm apart, around the sides and bottom.',
+    doneMsg:'Reinforce the two top corners with a small triangle of stitches — that’s where pockets tear. Repeat for the second pocket.',doneTitle:'Pocket <em>on</em>.',bounds:{x:ox-D.front.bb.x1*k-60,y:30,w:D.front.bb.w*k+150,h:600}});}
+function InterfacingScene(id){const D=DR().suit,f=cutPoly('suit','front');const k=6,ox=430,oy=60;const M=p=>P(ox+p.x*k,oy+p.y*k);const ip=D.interf,c0=centroid(ip),local=ip.map(p=>P((p.x-c0.x)*k,(p.y-c0.y)*k)),T=M(c0);
+  return AlignScene({title:'Fuse the <em>interfacing</em>.',msg:'Interfacing is a thin stiffening layer that gives lapels and front edges body. Lay it glue side down on the wrong side of the jacket front, matching the outline.',
+    drawBase:()=>cloth(f.map(M),shade(fabOf(id),.3),{thick:2}),mover:{pts:local,col:'#f4f1ea',alpha:.92,thick:1,deco:toW=>{ctx.save();ctx.globalAlpha=.25;gridIn(local.map(toW),9).forEach(q=>dot(q,.9,'#9a8f7a'));ctx.restore();}},
+    target:{x:T.x,y:T.y,ang:0},start:{x:T.x+330,y:T.y+70,ang:.35},after:'iron',ironTitle:'Press to <em>fuse</em>.',ironMsg:'Press — don’t slide — for about 10 seconds per spot with a damp cloth on top, until the glue bonds. Cover the whole piece.',ironStart:P(Math.min(900,T.x+330),T.y+180),
+    doneMsg:'Fused. Sew-in interfacing (or a firm cotton) works too: tack it in place with big running stitches around the edge.',doneTitle:'Interfacing <em>fused</em>.',bounds:{x:M(P(D.front.bb.x0,0)).x-40,y:30,w:520+Math.max(0,0),h:600}});}
+
+// ───────── pressing lines (lapel roll, trouser crease)
+function IronLineScene(o){let t=0,iron=null;
+  return{get dbg(){return{iron:iron&&iron.pos,line:o.line};},enter(){iron=Iron(resample(o.line,14),()=>DONE(o.doneMsg,o.doneTitle),o.ironStart);ui({kicker:KICK(),title:o.title,msg:o.msg,b2:{label:'Restart',fn:replay}});},bounds:()=>o.bounds,
+    update(dt){t+=dt;iron&&iron.update(dt);},down(p){iron.down(p);},move(p){iron.move(p);},up(){iron.up();},hover(p){iron.hover(p);},
+    draw(){o.drawBase(t);chalk(o.line,2,o.chalk||'rgba(255,255,255,.88)');iron.draw(t);}};}
+function LapelScene(id){const D=DR().suit,f=cutPoly('suit','front');const k=6,ox=430,oy=60;const M=p=>P(ox+p.x*k,oy+p.y*k);
+  return IronLineScene({title:'Roll the <em>lapel</em>.',msg:'The lapel folds back along the <b>roll line</b> — from the top button to the neck. Fold it along the chalk line and steam-press it, so it rolls softly instead of lying flat.',line:resample(D.roll.map(M),8),
+    drawBase:()=>{const hex=fabOf(id);cloth(f.map(M),hex,{thick:2});ctx.save();ctx.globalAlpha=.18;cloth(D.interf.map(M),'#ffffff',{thick:0,shadow:false});ctx.restore();},ironStart:P(780,520),chalk:chalkCol(fabOf(id)),
+    doneMsg:'Pressed into a soft roll. Let it cool completely before moving it — that’s what sets the shape.',doneTitle:'Lapel <em>rolled</em>.',bounds:{x:M(P(D.front.bb.x0,0)).x-40,y:30,w:560,h:600}});}
+function CreaseScene(id){const D=DR().suit,tr=D.trouser;const k=Math.min(5.4,560/tr.bb.h),ox=440,oy=40;const M=p=>P(ox+p.x*k,oy+p.y*k);
+  return IronLineScene({title:'Press the <em>crease</em>.',msg:'Fold each trouser leg so the inseam sits on top of the outseam — the crease forms exactly on the grain. Press it sharp from hem to hip.',line:resample([P(tr.cx,8),P(tr.cx,tr.O-1)].map(M),10),
+    drawBase:()=>cloth(tr.poly.map(M),fabOf(id),{thick:2}),ironStart:P(800,560),chalk:chalkCol(fabOf(id)),doneMsg:'A sharp crease makes trousers look tailored. Use a damp pressing cloth on wool so it doesn’t go shiny.',doneTitle:'Crease <em>pressed</em>.',bounds:{x:M(P(tr.bb.x0,0)).x-40,y:20,w:560,h:610}});}
+
+// ───────── buttonholes
+function ButtonholeScene(id){const isShirt=id==='shirt';const D=DR()[id];const hex=()=>fabOf(id);let phase=isShirt?'mark':'intro',t=0,marks=[],slicer=null,cutter=null,cutDone=false,gap=0;
+  const top=8,bot=isShirt?D.sl:D.jl;const k=540/(bot-top),Y=cm=>50+(cm-top)*k,X=500;
+  const fixed=isShirt?[10,D.sl-16]:[];const n=6;const tg=isShirt?Array.from({length:n-2},(_,i)=>fixed[0]+(i+1)*(fixed[1]-fixed[0])/(n-1)):[];
+  const box={x:446,y:312,w:108,h:16};
+  function toSlice(){phase='slice';slicer=SliceTool(v=>b1On(v));ui({kicker:KICK(),title:'Cut it <em>open</em>.',msg:'Stitch first, cut second: the buttonhole is outlined with tight satin stitches (button width + 3 mm). Now cut open <b>between</b> the rows — don’t snip the stitches!',b1:{label:'Cut',disabled:true,fn:doCut},b2:{label:'Restart',fn:replay}});}
+  function doCut(){const L=slicer.line;if(!L||cutter)return;const inside=q=>q.x>box.x+4&&q.x<box.x+box.w-4&&Math.abs(q.y-(box.y+box.h/2))<box.h/2-2;if(!inside(L.a)||!inside(L.b)){bad();setMsg('Careful — that would cut through the stitches. Keep both ends <b>inside</b> the stitched box.');return;}if(dist(L.a,L.b)<box.w*.6){bad();setMsg('A bit longer — the slit should run almost the full length of the box so the button fits.');return;}
+    cutter=new Cutter([L.a,L.b],()=>{cutter=null;cutDone=true;gap=0;setTimeout(()=>DONE(isShirt?'Repeat for the other five. Tip: put a pin across each end before cutting so the scissors can’t overshoot.':'Jacket buttonholes go on the right front for menswear, the left for womenswear. Repeat for the second one.','Buttonhole <em>done</em>.'),700);},null,200);slicer.line=null;b1On(false);}
+  return{enter(){if(isShirt)ui({kicker:KICK(),title:'Space the <em>buttonholes</em>.',msg:`The top and bottom ones are marked. Tap the centre-front line to mark the other ${n-2} — evenly spaced. Gap = distance ÷ ${n-1}.`,b2:{label:'Restart',fn:replay}});else{ui({kicker:KICK(),title:'Mark the <em>buttonholes</em>.',msg:'Jacket buttonholes run horizontally, starting 1.5 cm in from the front edge. The top one sits at the lapel break point; the second about 10 cm below.',b1:{label:'Stitch & open them →',fn:toSlice},b2:{label:'Restart',fn:replay}});}},
+    bounds(){return phase==='mark'?{x:320,y:20,w:360,h:610}:{x:250,y:200,w:500,h:240};},
+    update(dt){t+=dt;if(cutter)cutter.update(dt);if(cutDone)gap=Math.min(1,gap+dt*3);},
+    down(p){if(phase==='mark'){if(Math.abs(p.x-X)>GR(40))return;const cm=(p.y-50)/k+top;let best=-1,bd=1e9;tg.forEach((v,i)=>{if(marks.includes(i))return;const d=Math.abs(v-cm);if(d<bd){bd=d;best=i;}});if(best>=0&&bd<1.2){marks.push(best);pop();if(marks.length===tg.length){setTimeout(()=>{float(X,300,'Evenly spaced ✓','#2f7d55');setTimeout(toSlice,700);},200);}}else{bad();const g=((fixed[1]-fixed[0])/(n-1)).toFixed(1);setMsg(`Not evenly spaced. The gap should be about <b>${g} cm</b> — use the ruler.`);}return;}if(phase==='slice'&&!cutter&&!cutDone)slicer.down(p);},
+    move(p){if(slicer&&!cutter)slicer.move(p);},up(){if(slicer&&!cutter)slicer.up();},
+    draw(){if(phase==='mark'){const band=[P(X-70,40),P(X+60,40),P(X+60,Y(bot)+6),P(X-70,Y(bot)+6)];cloth(band,hex(),{thick:2});chalk([P(X,Y(top)),P(X,Y(bot))],1.6,chalkCol(hex()));
+        metal(X-150,40,44,Y(bot)-34,8,{sb:8,so:4,sa:.18});for(let c=Math.ceil(top);c<=bot;c++){const y=Y(c),h=c%10===0?14:c%5===0?9:5;ctx.fillStyle='rgba(29,32,39,.55)';ctx.fillRect(X-106-h,y-.5,h,1);if(c%10===0){font(10,600);ctx.textAlign='right';ctx.fillText(c,X-126,y+3.5);}}
+        const bh=(y,c)=>{ctx.save();ctx.strokeStyle=c;ctx.lineWidth=3;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(X-8,y);ctx.lineTo(X+8,y);ctx.stroke();ctx.restore();};
+        fixed.forEach(v=>bh(Y(v),CORAL));marks.forEach(i=>bh(Y(tg[i]),CORAL));return;}
+      const sw=swatch(260,210,480,220);cloth(sw,hex(),{thick:2});const cy=box.y+box.h/2,tc=lum(hex())>.6?'#7d8aa8':shade(hex(),.45);
+      satin(P(box.x,box.y+3),P(box.x+box.w,box.y+3),tc,6);satin(P(box.x,box.y+box.h-3),P(box.x+box.w,box.y+box.h-3),tc,6);satin(P(box.x,box.y-2),P(box.x,box.y+box.h+2),tc,10);satin(P(box.x+box.w,box.y-2),P(box.x+box.w,box.y+box.h+2),tc,10);
+      if(cutDone){ctx.save();ctx.fillStyle='rgba(20,18,26,.75)';rr(box.x+6,cy-1.5*gap-.5,box.w-12,3*gap+1,2);ctx.fill();ctx.restore();}
+      if(slicer)slicer.draw();if(cutter){cutter.drawSlit();ctx.save();ctx.translate(cutter.at(cutter.d).x,cutter.at(cutter.d).y);ctx.scale(.7,.7);ctx.translate(-cutter.at(cutter.d).x,-cutter.at(cutter.d).y);cutter.drawTool();ctx.restore();}}};}
+
+// ───────── buttons
+function ButtonScene(id){const c=P(500,330),o=24;const holes=[P(c.x-o,c.y-o),P(c.x+o,c.y-o),P(c.x+o,c.y+o),P(c.x-o,c.y+o)];const seq=[0,2,1,3,0,2,1,3].map((h,i)=>({h,dir:i%2?'down':'up'}));
+  const bcol=id==='jeans'?'#b87333':id==='suit'?'#3b2f2a':'#efe9de';let st,phase='sew',t=0,loop=null,wraps=0,trail=[];const hex=()=>fabOf(id);
+  st=Stitcher({path:[holes[0],holes[2]],guided:true,holes,seq,pxcm:60,L:1,rule:'running',noKnot:true,showFirst:4,wrong:s=>s.dir==='up'?'Come up through the glowing hole.':'Go down diagonally — through the hole opposite.',onError:m=>setMsg(m),onPierce:n=>{if(n===2)setMsg('One diagonal done. Now the other diagonal: up, then down across.');if(n===4)setMsg('That’s an X. Go round once more for strength.');},
+    onDone:()=>{setTimeout(()=>{phase='shank';ui({kicker:KICK(),title:'Wrap a <em>shank</em>.',msg:'Bring the needle up under the button and wind the thread round the stitches 3 times. This little stem gives room for the fabric of the buttonhole. Circle the button to wrap it.',b2:{label:'Restart',fn:replay}});},300);}});
+  return{enter(){ui({kicker:KICK(),title:'Sew on the <em>button</em>.',msg:id==='jeans'?'Real jeans use a hammered tack button — a hand-sewn shank button works just as well. Sew it in an X through the four holes.':'Sew it on in an X: up through one hole, down through the hole opposite. Leave a matchstick’s gap under the button.',b2:{label:'Restart',fn:replay}});},
+    bounds(){return{x:300,y:170,w:400,h:320};},
+    update(dt){t+=dt;st.update(dt);trail.forEach(q=>q.a-=dt*1.4);trail=trail.filter(q=>q.a>0);},
+    down(p){if(phase==='sew'){st.down(p);return;}if(phase==='shank'&&dist(p,c)<120)loop={acc:0,last:Math.atan2(p.y-c.y,p.x-c.x)};},
+    move(p){if(phase==='sew'){st.move(p);return;}if(loop){const a=Math.atan2(p.y-c.y,p.x-c.x);let d=a-loop.last;if(d>Math.PI)d-=Math.PI*2;if(d<-Math.PI)d+=Math.PI*2;loop.acc+=d;loop.last=a;trail.push({x:p.x,y:p.y,a:1});const w=Math.floor(Math.abs(loop.acc)/(Math.PI*1.7));if(w>wraps){wraps=w;pop();float(c.x,c.y-80,`wrap ${wraps}/3`,INK);if(wraps>=3){loop=null;phase='done';setTimeout(()=>DONE('Knot the thread on the back. A shank button sits up off the fabric, so it buttons easily without straining.','Button <em>on</em>.'),400);}}}},
+    hover(p){if(phase==='sew')st.move(p);},up(){loop=null;},
+    draw(){cloth(swatch(310,180,380,300),hex(),{thick:2});if(phase!=='sew')st.done=true;
+      drawButton(c,56,bcol);holes.forEach(h=>{dot(h,6,'rgba(20,16,12,.55)');dot(P(h.x,h.y+1),6,null,'rgba(255,255,255,.25)',1);});
+      if(wraps>0){ctx.save();ctx.globalAlpha=.85;for(let i=0;i<wraps;i++)dot(c,60+i*3,null,THREAD,2);ctx.restore();}
+      st.draw(t);
+      if(phase==='shank'){ctx.save();ctx.setLineDash([4,5]);ctx.strokeStyle=rgba(CORAL,.6);ctx.lineWidth=2;ctx.beginPath();ctx.arc(c.x,c.y,90,t*1.5,t*1.5+Math.PI*1.7);ctx.stroke();ctx.restore();}
+      if(trail.length>1){ctx.save();ctx.lineCap='round';for(let i=1;i<trail.length;i++){ctx.globalAlpha=trail[i].a*.6;ctx.strokeStyle=THREAD;ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(trail[i-1].x,trail[i-1].y);ctx.lineTo(trail[i].x,trail[i].y);ctx.stroke();}ctx.restore();}}};}
+
+// ───────── flat-felled seam
+function FellScene(id){const k=50,sy=330,x0=200,x1=800,edge=sy-1.5*k,trimY=sy-.6*k;let phase='trim',t=0,slicer=SliceTool(v=>b1On(v)),cutter=null,fall=-1,f=0,drag=false,sx=0,press=-1,st=null;const hex=()=>fabOf(id);const wrong=()=>shade(fabOf(id),.3);
+  function uiTrim(m){ui({kicker:KICK(),title:'Trim <em>one</em> allowance.',msg:m||'Flat-felled seams are what make jeans indestructible. The seam is already sewn; now trim the <b>top</b> seam allowance down to 6 mm along the chalk line.',b1:{label:'Cut',disabled:!slicer.line,fn:doCut},b2:{label:'Restart',fn:replay}});}
+  function doCut(){const L=slicer.line;if(!L||cutter)return;const span=Math.abs(L.b.x-L.a.x),mean=(Math.abs(L.a.y-trimY)+Math.abs(L.b.y-trimY))/2/k;if(span<(x1-x0)*.85){bad();setMsg('Cut the <b>whole length</b> — drag from one end of the chalk line to the other.');return;}if(mean>.25){bad();setMsg(`About <b>${(mean*10).toFixed(0)} mm</b> off the chalk line — line it up first.`);return;}
+    const a=L.a.x<L.b.x?L.a:L.b,b=L.a.x<L.b.x?L.b:L.a;cutter=new Cutter([P(x0-10,a.y),P(x1+10,b.y)],()=>{cutter=null;fall=0;},null,420);slicer.line=null;b1On(false);}
+  return{enter(){uiTrim();},bounds(){return{x:160,y:200,w:680,h:280};},
+    update(dt){t+=dt;if(cutter)cutter.update(dt);if(fall>=0&&fall<1){fall=Math.min(1,fall+dt*1.5);if(fall>=1){phase='fold';ui({kicker:KICK(),title:'Wrap the <em>wide</em> allowance.',msg:'Fold the wide allowance in half over the trimmed one, so its raw edge is tucked away. Drag it down over the narrow one.',b2:{label:'Restart',fn:replay}});}}
+      if(phase==='fold'&&!drag)f=lerp(f,0,.15);if(press>=0&&press<1){press=Math.min(1,press+dt*1.4);if(press>=1){phase='stitch';st=Stitcher({a:P(260,sy+.75*k-7),b:P(740,sy+.75*k-7),pxcm:k,rule:'running',guided:false,L:.6,tolOff:.25,color:GOLD,onError:m=>setMsg(m),onDone:()=>setTimeout(()=>DONE('Two rows of topstitching, and no raw edges anywhere — that’s why jeans survive years of washing. Use this on the inseams, back yoke and seat seam.','A <em>flat-felled</em> seam.'),500)});ui({kicker:KICK(),title:'Topstitch the <em>fell</em>.',msg:'Running stitch in gold, 2 mm from the folded edge, through all the layers. Keep it straight — it shows on the outside.',b2:{label:'Restart',fn:replay}});}}if(st)st.update(dt);},
+    down(p){if(phase==='trim'&&!cutter)slicer.down(p);else if(phase==='fold'){drag=true;sx=p.y;}else if(phase==='stitch')st.down(p);},
+    move(p){if(phase==='trim'&&!cutter)slicer.move(p);else if(phase==='fold'&&drag)f=clamp((p.y-sx)/70,0,1);else if(phase==='stitch')st.move(p);},
+    hover(p){if(phase==='stitch')st.move(p);},
+    up(){if(phase==='trim')slicer.up();if(phase==='fold'&&drag){drag=false;if(f>.85){f=1;phase='press';press=0;pop();setMsg('Now press it flat to one side…');}else bad();}},
+    draw(){const L=hex(),Wc=wrong();cloth([P(x0-20,sy),P(x1+20,sy),P(x1+20,sy+130),P(x0-20,sy+130)],L,{thick:2});
+      const folded=press>=0;
+      if(!folded){const bt=lerp(edge,sy-.75*k,ease(f));cloth([P(x0,bt),P(x1,bt),P(x1,sy),P(x0,sy)],shade(Wc,-.06),{thick:2});
+        const topY=fall>=0?trimY:edge;if(fall<1){ctx.save();ctx.globalAlpha=fall<0?1:1-fall;ctx.translate(0,fall<0?0:-fall*60);cloth([P(x0,edge),P(x1,edge),P(x1,trimY),P(x0,trimY)],Wc,{thick:1});ctx.restore();}
+        cloth([P(x0,topY),P(x1,topY),P(x1,sy),P(x0,sy)],Wc,{thick:1});if(f>.05)cloth([P(x0,bt),P(x1,bt),P(x1,lerp(edge,bt,.5)+2),P(x0,lerp(edge,bt,.5)+2)],shade(Wc,-.1),{thick:1});
+        if(phase==='trim')chalk([P(x0,trimY),P(x1,trimY)],2,chalkCol(Wc));
+        if(phase==='fold'&&f<.05&&!drag){ctx.save();ctx.globalAlpha=.6+.3*Math.sin(t*3);font(12,600);ctx.fillStyle=CORAL;ctx.textAlign='center';ctx.fillText('↓ drag the wide allowance down',500,edge-14);ctx.restore();}}
+      else{const e=easeIO(press);cloth([P(x0,sy),P(x1,sy),P(x1,sy+.75*k*e+2),P(x0,sy+.75*k*e+2)],shade(L,-.06),{thick:2});ctx.save();ctx.strokeStyle='rgba(0,0,0,.25)';ctx.beginPath();ctx.moveTo(x0,sy+.75*k*e);ctx.lineTo(x1,sy+.75*k*e);ctx.stroke();ctx.restore();if(press>=1)dashed([P(x0,sy+5),P(x1,sy+5)],GOLD,1.8,[5,3]);}
+      dashed([P(x0,sy),P(x1,sy)],'rgba(0,0,0,.35)',1.2,[3,3]);
+      if(phase==='trim'){slicer.draw();}if(cutter){cutter.drawSlit();cutter.drawTool();}if(st&&phase==='stitch'){chalk([P(260,sy+.75*k-7),P(740,sy+.75*k-7)],1.4,chalkCol(L));st.draw(t);}}};}
+
+// ───────── fly zip
+function FlyScene(id){const k=20,cfx=600,top=70;const J=[P(cfx-3.5*k,top)].concat([P(cfx-3.5*k,top+14*k)]).concat(sampleQuad(P(cfx-3.5*k,top+14*k),P(cfx-3.5*k,top+19*k),P(cfx,top+19*k),8).slice(1));const pts=resample(J,1);const pth=mkPath(J);const holes=Array.from({length:16},(_,i)=>pth.at(i*pth.L/15));
+  let st=null,t=0;const hex=()=>fabOf(id);
+  st=Stitcher({path:J,guided:true,holes,rule:'running',pxcm:k,L:1,color:GOLD,showFirst:5,wrong:()=>'Follow the J — next hole along the curve.',onError:m=>setMsg(m),onDone:()=>setTimeout(()=>DONE('The J-curve holds the zip facing in place and is the signature of jeans. Finish with a bar tack (a few tight stitches) at the bottom of the curve.','Fly <em>topstitched</em>.'),400)});
+  return{enter(){ui({kicker:KICK(),title:'Topstitch the <em>fly</em>.',msg:'The zip is already sewn to the facing underneath. Topstitch the J-shape 3.5 cm from the centre front, following the holes, in gold.',b2:{label:'Restart',fn:replay}});},
+    bounds(){return{x:340,y:40,w:400,h:540};},update(dt){t+=dt;st.update(dt);},down(p){st.down(p);},move(p){st.move(p);},hover(p){st.move(p);},
+    draw(){cloth(swatch(360,50,360,510),hex(),{thick:2});ctx.save();ctx.globalAlpha=.3;rr(cfx-12,top+6,24,13*k,4);ctx.fillStyle='#222';ctx.fill();for(let y=top+10;y<top+13*k;y+=5){ctx.fillStyle='#b9b6ae';ctx.fillRect(cfx-6,y,12,2.4);}ctx.restore();
+      chalk([P(cfx,top-10),P(cfx,top+24*k)],1.4,chalkCol(hex()));font(11,700);ctx.fillStyle='rgba(255,255,255,.55)';ctx.save();ctx.translate(cfx+14,top+80);ctx.rotate(Math.PI/2);ctx.fillText('CENTRE FRONT',0,0);ctx.restore();st.draw(t);}};}
+
+// ═════════════════════════ FINISHED GARMENTS ═════════════════════════
+function garmentShapes(id,o={}){const D=DR()[id],out=[];const add=(pts,sh=0)=>out.push({pts,sh});
+  if(id==='shift'||id==='darted')add(fullH(cutPoly(id,'front')));
+  else if(id==='sundress'){const {wy,qW,sl}=D,hw=qW*2.1,sk=[],n=24;for(let i=0;i<=n;i++)sk.push(P(lerp(-qW,qW,i/n),wy+Math.sin(i*1.9)*.4));for(let i=n;i>=0;i--)sk.push(P(lerp(-hw,hw,i/n),wy+sl-1.5+Math.sin(i*1.3)*.6));add(sk);add(fullH(cutPoly(id,'bodice')),.04);}
+  else if(id==='shirt'||id==='suit'){const sv=fullH(id==='shirt'?cutPoly(id,'sleeve'):D.sleeve.poly),sp=D.sp;const R=sv.map(p=>{const r=rot(P(p.x*.58,p.y),-.42);return P(sp.x+r.x,sp.y+r.y);});add(R,-.06);add(R.map(mxP),-.06);const f=cutPoly(id,'front');add(f.map(mxP),-.02);add(f);
+    if(id==='shirt')add([P(-8.5,-1.5),P(8.5,-1.5),P(10,3.5),P(1.2,10),P(0,8.5),P(-1.2,10),P(-10,3.5)],.08);
+    if(id==='suit'&&o.trousers){const tr=D.trouser,dx=D.front.bb.x1+tr.hipW+18,dy=6;const T=tr.poly.map(p=>P(p.x-1.5+dx,p.y+dy));add(T.map(p=>P(2*dx-p.x,p.y)),-.03);add(T);add([P(dx-tr.wW-2,dy-4),P(dx+tr.wW+2,dy-4),P(dx+tr.wW+2,dy+.3),P(dx-tr.wW-2,dy+.3)],.05);}}
+  else if(id==='jeans'){const f=cutPoly(id,'front').map(p=>P(p.x-1.5,p.y)),wW=D.front.wW;add(f.map(mxP),-.03);add(f);add([P(-wW-2,-4),P(wW+2,-4),P(wW+2,.3),P(-wW-2,.3)],.05);}
+  return out;}
+function garmentDetails(id,M,s){const D=DR()[id];const st=(pts,col,w=1.3,dash=[4,3])=>{ctx.save();ctx.setLineDash(dash);path(pts.map(M),false);ctx.strokeStyle=col;ctx.lineWidth=w;ctx.stroke();ctx.restore();};
+  const btn=(p,r,col)=>{const q=M(p);drawButton(q,r*s,col);[[-1,-1],[1,-1],[1,1],[-1,1]].forEach(([a,b])=>dot(P(q.x+a*r*s*.28,q.y+b*r*s*.28),Math.max(.6,r*s*.1),'rgba(0,0,0,.35)'));};
+  const lt=rgba('#ffffff',.4),dk='rgba(0,0,0,.25)';
+  if(id==='shirt'){st([P(1.4,10),P(1.4,D.sl-1)],dk,1);for(let i=0;i<6;i++)btn(P(0,10+i*(D.sl-26)/5),.75,'#f3efe6');st([P(-16,D.armD+1),P(-7,D.armD+1),P(-7,D.armD+11),P(-16,D.armD+11),P(-16,D.armD+1)],dk,1);}
+  if(id==='jeans'){const f=D.front;st([P(-3.5,.5),P(-3.5,f.rise-12),P(-1.5,f.rise-8.5),P(0,f.rise-8)],GOLD,1.6);[1,-1].forEach(g=>{st([P(g*(f.wW-6.5),.3),P(g*(f.wW-3),6),P(g*(f.hipW-.4),9)],GOLD,1.6);dot(M(P(g*(f.hipW-.6),9)),Math.max(1.4,.5*s),'#b87333');st([P(g*(f.hipW-.8),f.rise+2),P(g*(f.cx+9),f.O-1)],GOLD,1.2);});btn(P(0,-2),1,'#b87333');}
+  if(id==='suit'){[1,-1].forEach(g=>{st([P(g*-2.5,D.bp),P(g*7,1.5)],dk,1.2,[1,0]);st([P(g*-9,D.wy+10),P(g*-19,D.wy+9)],dk,1.4,[1,0]);});btn(P(0,D.bp+1),1.2,'#3b2f2a');btn(P(0,D.bp+11),1.2,'#3b2f2a');
+    const tr=D.trouser,dx=D.front.bb.x1+tr.hipW+18;[1,-1].forEach(g=>st([P(dx+g*tr.cx,12),P(dx+g*tr.cx,tr.O+4)],lt,1.1,[1,0]));}}
+function FinalScene(id){let t=0;const p=projOf(id),dress=['shift','sundress','darted'].includes(id);
+  return{enter(){burst(500,200,60);chime();state.done[keyOf(id,curI)]=true;save();ui({kicker:KICK(),title:p.doneTitle,msg:p.doneMsg,extra:swatches(id),b1:{label:'Pattern card',fn:()=>patternCard(id)},b2:{label:'All projects',fn:home}});},
+    bounds(){return dress?(portrait?{x:330,y:10,w:340,h:630}:{x:50,y:0,w:900,h:H}):{x:40,y:10,w:920,h:620};},
+    update(dt){t+=dt;},
+    draw(){const hex=fabOf(id);
+      if(!dress){const sh=garmentShapes(id,{trousers:true});const {M,s}=fitMap(sh.flatMap(q=>q.pts),{x:110,y:30,w:780,h:580});sh.forEach(q=>cloth(q.pts.map(M),q.sh?shade(hex,q.sh):hex,{thick:2}));garmentDetails(id,M,s);return;}
+      const D=DR()[id],m=state.m,pr=bodyProfile(m),cx=500,top=26;const sh=garmentShapes(id);const maxY=Math.max(...sh.flatMap(q=>q.pts.map(p=>p.y)));const kk=Math.min(5.2,560/(maxY+12));
+      const f=y=>y<4?1:y<18?lerp(1,.62,(y-4)/14):.62;const M=q=>{const sway=Math.sin(t*1.3)*Math.max(0,(q.y-40)/60)*kk*.9*(q.y/maxY);return P(cx+q.x*f(q.y)*kk+sway,top+(q.y+10.2)*kk);};
+      drawForm(pr,cx,top,kk);
+      sh.forEach(q=>{const pts=q.pts.map(M);ctx.save();path(pts);shadow(18,10,.22);ctx.fillStyle=hex;ctx.fill();noShadow();ctx.fillStyle=weave(q.sh?shade(hex,q.sh):hex);ctx.fill();ctx.clip();const bb=bbox(pts);const g=ctx.createLinearGradient(bb.x0,0,bb.x1,0);g.addColorStop(0,'rgba(0,0,0,.28)');g.addColorStop(.3,'rgba(255,255,255,.07)');g.addColorStop(.55,'rgba(0,0,0,0)');g.addColorStop(1,'rgba(0,0,0,.3)');ctx.fillStyle=g;ctx.fillRect(bb.x0,bb.y0,bb.w,bb.h);ctx.restore();ctx.save();path(pts);ctx.strokeStyle=shade(hex,-.35);ctx.lineWidth=1.1;ctx.stroke();ctx.restore();});
+      if(id==='darted'){const d=D.dart;[1,-1].forEach(g=>{ctx.save();ctx.strokeStyle='rgba(0,0,0,.28)';ctx.lineWidth=1.3;path([M(P(g*d.x,d.y-14)),M(P(g*d.x,d.y)),M(P(g*d.x,d.y+12))],false);ctx.stroke();ctx.restore();});}
+      if(id==='sundress'){ctx.save();ctx.strokeStyle='rgba(0,0,0,.25)';ctx.lineWidth=1.2;path([M(P(-D.qW,D.wy)),M(P(D.qW,D.wy))],false);ctx.stroke();ctx.restore();}
+      const hy=maxY-2;ctx.save();ctx.setLineDash([4,3]);ctx.strokeStyle=rgba('#ffffff',.35);ctx.lineWidth=1.2;ctx.beginPath();const a=M(P(-60,hy)),b=M(P(60,hy));ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.restore();
+      if(!portrait){font(12,600);ctx.textAlign='left';[['Bust',m.bust],['Waist',m.waist],['Hips',m.hip],['Length',m.length]].forEach((r,i)=>{font(12,600);ctx.fillStyle='rgba(29,32,39,.45)';ctx.fillText(r[0],80,170+i*58);font(22,700);ctx.fillStyle=INK;ctx.fillText(r[1]+' cm',80,195+i*58);});
+        font(12,600);ctx.textAlign='right';p.steps.forEach((s,i)=>{ctx.fillStyle='rgba(29,32,39,.55)';ctx.fillText(s.name,890,160+i*30);dot(P(906,156+i*30),5,state.done[id+'.'+i]?CORAL:'rgba(0,0,0,.1)');});}}};}
+
+// ───────────────────────── input
+const toV=e=>P((e.clientX-view.ox)/view.s,(e.clientY-view.oy)/view.s);
+let down=false;
+cv.addEventListener('pointerdown',e=>{ac();down=true;try{cv.setPointerCapture(e.pointerId);}catch(_){}scene&&scene.down&&scene.down(toV(e));});
+cv.addEventListener('pointermove',e=>{const p=toV(e);if(down)scene&&scene.move&&scene.move(p);else scene&&scene.hover&&scene.hover(p);});
+const upH=e=>{if(!down)return;down=false;scene&&scene.up&&scene.up(toV(e));};
+cv.addEventListener('pointerup',upH);cv.addEventListener('pointercancel',upH);
+addEventListener('keydown',e=>{if(e.key==='Escape'&&!$modal.hidden)closeModal();});
+
+// ───────────────────────── loop
+let last=performance.now(),acc=0,gt=0;
+function frame(now){const dt=Math.min(.05,(now-last)/1000);last=now;acc+=dt;gt+=dt;layoutStage();let n=0;while(acc>=1/60&&n<4){scene&&scene.update&&scene.update(1/60);updFx(1/60);acc-=1/60;n++;}if(n>=4)acc=0;
+  render(dt);requestAnimationFrame(frame);}
+function render(dt){
+  ctx.setTransform(1,0,0,1,0,0);ctx.fillStyle=BG;ctx.fillRect(0,0,cv.width,cv.height);noisePat=noisePat||ctx.createPattern(noiseCv,'repeat');ctx.fillStyle=noisePat;ctx.fillRect(0,0,cv.width,cv.height);
+  const vg=ctx.createRadialGradient(cv.width/2,cv.height/2,Math.min(cv.width,cv.height)*.3,cv.width/2,cv.height/2,Math.max(cv.width,cv.height)*.75);vg.addColorStop(0,'rgba(255,255,255,.18)');vg.addColorStop(1,'rgba(120,100,80,.08)');ctx.fillStyle=vg;ctx.fillRect(0,0,cv.width,cv.height);
+  ctx.setTransform(DPR*view.s,0,0,DPR*view.s,DPR*view.ox,DPR*view.oy);
+  if(scene){ctx.save();scene.draw();ctx.restore();}drawFx();
+  if(fade>0){fade=Math.max(0,fade-dt*3.5);ctx.setTransform(1,0,0,1,0,0);ctx.fillStyle=`rgba(233,231,227,${fade})`;ctx.fillRect(0,0,cv.width,cv.height);}}
+window.__haute={get scene(){return scene},startStep,openProject,home,DR,view,state,adv(sec){for(let i=0;i<sec*60;i++){scene&&scene.update&&scene.update(1/60);updFx(1/60);}fade=0;layoutStage();render(0);}};
+home();requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
