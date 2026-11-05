@@ -67,9 +67,19 @@ button[hidden]{display:none}
 #modal td{padding:7px 4px;border-bottom:1px solid var(--line)}
 #modal td:last-child{text-align:right;font-weight:600;font-variant-numeric:tabular-nums}
 .tag{display:inline-block;font-size:11.5px;font-weight:600;color:var(--coral);background:var(--coral-soft);padding:3px 8px;border-radius:99px;margin-bottom:8px}
+.irl{font-size:13px;line-height:1.45;color:#474a52;background:rgba(63,155,107,.1);border-radius:12px;padding:9px 11px}
+.irl b{color:#2f7d55}
+#modal .actions{flex-wrap:wrap}
+#modal .actions .wide{flex-basis:100%}
+#modal .note{font-size:12.5px;color:var(--muted)}
+#pp{display:none}
+.ppage{position:relative;overflow:hidden;background:#fff;page-break-after:always;break-after:page}
+.pfoot{position:absolute;left:1cm;bottom:.32cm;font:7.5pt Arial,sans-serif;color:#888}
 @media (max-width:520px){#kicker{margin-top:12px}#msg{font-size:13.5px}}
 @media print{
-  body{background:#fff;overflow:visible}
+  html,body{background:#fff;overflow:visible!important;height:auto!important}
+  body.pp>*:not(#pp){display:none!important}
+  body.pp #pp{display:block}
   canvas,#hud,#panel{display:none!important}
   #modal{position:static;background:none;backdrop-filter:none;display:block;padding:0}
   #modal .card{box-shadow:none;max-height:none;max-width:none}
@@ -95,6 +105,8 @@ button[hidden]{display:none}
   <div class="btns"><button id="b2"></button><button id="b1"></button></div>
 </section>
 <div id="modal" hidden></div>
+<div id="pp"></div>
+<style id="ppstyle"></style>
 
 <script>
 (()=>{
@@ -115,8 +127,8 @@ const cv=$('c'),ctx=cv.getContext('2d');
 const hud=$('hud'),panel=$('panel'),$kicker=$('kicker'),$title=$('title'),$msg=$('msg'),$extra=$('extra'),$b1=$('b1'),$b2=$('b2'),$modal=$('modal'),$dots=$('dots'),$snd=$('snd');
 let DPR=1,cw=0,ch=0;const view={s:1,ox:0,oy:0};
 function resize(){DPR=Math.min(2,window.devicePixelRatio||1);cw=innerWidth;ch=innerHeight;cv.width=Math.round(cw*DPR);cv.height=Math.round(ch*DPR);cv.style.width=cw+'px';cv.style.height=ch+'px';}
-let cam=null,portrait=false;
-function layoutStage(snap){const top=hud.getBoundingClientRect().bottom+4;const bot=panel.getBoundingClientRect().top-4;const ah=Math.max(160,bot-top),aw=cw-24;portrait=aw/ah<1;const b=(typeof scene!=='undefined'&&scene&&scene.bounds&&scene.bounds())||{x:0,y:0,w:W,h:H};if(!cam||snap)cam={...b};else for(const k of['x','y','w','h'])cam[k]=lerp(cam[k],b[k],.12);const s=Math.min(aw/cam.w,ah/cam.h);view.s=s;view.ox=(cw-cam.w*s)/2-cam.x*s;view.oy=top+(ah-cam.h*s)/2-cam.y*s;}
+let cam=null,portrait=false,stageAR=1;
+function layoutStage(snap){const top=hud.getBoundingClientRect().bottom+4;const bot=panel.getBoundingClientRect().top-4;const ah=Math.max(160,bot-top),aw=cw-24;portrait=aw/ah<1;stageAR=ah/aw;const b=(typeof scene!=='undefined'&&scene&&scene.bounds&&scene.bounds())||{x:0,y:0,w:W,h:H};if(!cam||snap||b.snap)cam={...b};else for(const k of['x','y','w','h'])cam[k]=lerp(cam[k],b[k],.12);const s=Math.min(aw/cam.w,ah/cam.h);view.s=s;view.ox=(cw-cam.w*s)/2-cam.x*s;view.oy=top+(ah-cam.h*s)/2-cam.y*s;}
 const GR=n=>Math.max(n,22/Math.max(view.s,.05));
 addEventListener('resize',resize);resize();
 
@@ -218,26 +230,40 @@ const FAB={
   dress:[{n:'Indigo cotton',c:'#3e5486'},{n:'Terracotta linen',c:'#b5583f'},{n:'Sage cotton',c:'#7b9278'},{n:'Mustard linen',c:'#c79330'},{n:'Plum',c:'#6b3a5c'}],
   shirt:[{n:'White poplin',c:'#f1efe9'},{n:'Blue oxford',c:'#a7bfd8'},{n:'Ecru linen',c:'#e2d3bb'},{n:'Olive cotton',c:'#7a8a62'},{n:'Navy chambray',c:'#3a4a68'}],
   denim:[{n:'Indigo denim',c:'#34507b'},{n:'Raw dark denim',c:'#222c40'},{n:'Light wash',c:'#7d9cc0'},{n:'Black denim',c:'#2c2c2e'},{n:'Tan canvas',c:'#b89c70'}],
-  suit:[{n:'Charcoal wool',c:'#40444d'},{n:'Navy wool',c:'#2b3652'},{n:'Tan linen',c:'#b79b72'},{n:'Olive tweed',c:'#626d4f'},{n:'Oxblood',c:'#6e3434'}]};
+  suit:[{n:'Charcoal wool',c:'#40444d'},{n:'Navy wool',c:'#2b3652'},{n:'Tan linen',c:'#b79b72'},{n:'Olive tweed',c:'#626d4f'},{n:'Oxblood',c:'#6e3434'}],
+  bottoms:[{n:'Sand linen',c:'#cdb48e'},{n:'Black linen',c:'#2e2e31'},{n:'Olive twill',c:'#6c7250'},{n:'Rust cotton',c:'#a8532f'},{n:'Navy crepe',c:'#2f3a57'}],
+  skirt:[{n:'Camel wool',c:'#b0875a'},{n:'Black twill',c:'#29292c'},{n:'Burgundy',c:'#6d2a35'},{n:'Grey suiting',c:'#7c7f86'},{n:'Denim',c:'#3d5a85'}]};
 const GOLD='#d8a43f';
+const SKIRTS=['aline','pencil'],DRESSES=['shift','sundress','darted','top'];
 const S_=(name,sub,make)=>({name,sub,make});
-const BASICS=[{name:'Thread & knot',sub:'Cut, thread, tie',make:ThreadScene},{name:'Running stitch',sub:'In, out, in, out',make:RunningScene},{name:'Backstitch',sub:'The strong seam',make:BackScene},{name:'Measure',sub:'Bust, waist, hips',make:MeasureScene}];
+const BASICS=[{name:'Thread & knot',sub:'Cut, thread, tie',make:ThreadScene},{name:'Running stitch',sub:'In, out, in, out',make:RunningScene},{name:'Backstitch',sub:'The strong seam',make:BackScene},{name:'Measure',sub:'Bust, waist, hips',make:MeasureScene},{name:'Buttons',sub:'X marks the spot',make:()=>ButtonScene('basics')},{name:'Zips',sub:'Tack, stitch, unpick',make:()=>ZipScene('basics')}];
 const PROJ=[
  {id:'shift',fab:'dress',name:'Shift dress',level:'Beginner',sub:'Sleeveless & simple',title:'A simple <em>shift dress</em>.',desc:'One pattern piece, cut on the fold — the perfect first garment.',learn:'grain, cutting, seams, pressing and hems.',doneTitle:'You made a <em>dress</em>.',doneMsg:'Cut to your measurements, sewn with your own stitches. Try another colour, then grab the pattern card to make it for real.',
   steps:[S_('Pattern & grain','Lay it on the fold',()=>LayoutScene('shift','front')),S_('Cut it out','Measure twice, cut once',()=>CutScene('shift','front')),S_('Sew the seams','Shoulders & sides',()=>SeamsScene('shift')),S_('Hem it','Fold, fold, stitch',()=>HemScene('shift')),S_('Wear it','Your finished dress',()=>FinalScene('shift'))]},
+ {id:'top',fab:'dress',name:'Boxy top',level:'Beginner',sub:'Cut-on sleeves',title:'A <em>boxy top</em>.',desc:'A loose, easy top whose sleeves are cut in one with the body — so there are no sleeves to set in.',learn:'cutting on the fold, curved underarm seams and neat hems.',doneTitle:'Your <em>top</em> is done.',doneMsg:'Two pieces, a few seams and a hem. Finish the neckline with the bias strip from the pattern, or simply fold it 0.5 cm twice and stitch.',cardNote:'Snip into the curved underarm seam allowance (not through the stitches) so it lies flat. Cut the neck binding at 45° to the grain — that’s what lets it bend round the curve.',
+  steps:[S_('Pattern & grain','Lay it on the fold',()=>LayoutScene('top','front')),S_('Cut it out','Curved underarms',()=>CutScene('top','front')),S_('Sew the seams','Shoulders & sides',()=>SeamsScene('top')),S_('Hem it','Fold, fold, stitch',()=>HemScene('top')),S_('Wear it','Your finished top',()=>FinalScene('top'))]},
+ {id:'pants',fab:'bottoms',name:'Loose trousers',level:'Beginner',sub:'Elastic waist',title:'Easy <em>wide-leg trousers</em>.',desc:'Pull-on trousers with an elastic waist: no zip and no buttons. The comfiest thing you’ll ever sew.',learn:'cutting trouser legs, inseams and the crotch seam, and an elastic casing.',doneTitle:'You made <em>trousers</em>.',doneMsg:'Wide legs and an elastic waist that fits without a single fastening. Add patch pockets from the jeans pattern if you like.',splay:.12,cardNote:'The top 4.5 cm is the elastic casing (fold 1 cm, then 3.5 cm). Use 2.5 cm wide elastic, cut to your waist minus 10%. The back leg has a deeper crotch and a higher centre back so you can sit comfortably.',
+  seam:{a:'inseam',edge:'INSEAM EDGE ↑',rest:'Sew the other inseam. Then turn one leg right side out, slip it inside the other and sew the crotch seam in one curve, front waist to back waist — twice for strength.',btn:'Sew the inseam →'},
+  steps:[S_('Pattern & grain','Legs on the grain',()=>LayoutScene('pants','front')),S_('Cut the legs','Front & back',()=>CutScene('pants','front')),S_('Sew the seams','Inseams & crotch',()=>SeamsScene('pants')),S_('Elastic waist','Casing & safety pin',()=>ElasticScene('pants')),S_('Hem it','Fold, fold, stitch',()=>HemScene('pants')),S_('Wear it','Your finished trousers',()=>FinalScene('pants'))]},
  {id:'sundress',fab:'dress',name:'Sundress',level:'Beginner+',sub:'Bodice + gathered skirt',title:'A gathered <em>sundress</em>.',desc:'A neat bodice with narrow straps and a full, twirly skirt made from simple rectangles.',learn:'cutting rectangles, gathering, and joining a skirt to a bodice.',doneTitle:'Your <em>sundress</em> twirls.',doneMsg:'Gathering turned a plain rectangle into a full skirt. Close the back with a zip, buttons or a tie — or cut the bodice a little looser and simply pull it on.',
   steps:[S_('Pattern & grain','Bodice on the fold',()=>LayoutScene('sundress','bodice')),S_('Cut the bodice','Curves & straps',()=>CutScene('sundress','bodice')),S_('Cut the skirt','Just straight lines',()=>CutScene('sundress','skirt')),S_('Gather & join','Pull it in, stitch it on',()=>GatherScene('sundress')),S_('Hem it','Fold, fold, stitch',()=>HemScene('sundress')),S_('Wear it','Twirl test',()=>FinalScene('sundress'))]},
+ {id:'aline',fab:'skirt',name:'A-line skirt',level:'Beginner+',sub:'Zip & waistband',title:'An <em>A-line</em> skirt.',desc:'A skirt that flares gently from the hips, with a side zip and a buttoned waistband.',learn:'darts, putting in a zip, waistbands, buttonholes and buttons.',doneTitle:'Your <em>skirt</em> is done.',doneMsg:'Darts, a zip, a waistband and a button: the four skills behind almost every skirt and pair of trousers.',cardNote:'Front and back are the same except the darts: the back ones are longer. The zip goes in the left side seam, so sew that seam only from 18 cm below the waist down to the hem.',
+  seam:{a:'side seam',edge:'SIDE EDGE ↑',rest:'Sew the right side seam the full length. On the left, tack the top 18 cm with big temporary stitches (that’s where the zip goes) and sew the rest normally.',btn:'Sew the side seam →'},
+  steps:[S_('Pattern & grain','Lay it on the fold',()=>LayoutScene('aline','front')),S_('Cut it out','Front & back',()=>CutScene('aline','front')),S_('Sew the darts','Shape the waist',()=>DartScene('aline')),S_('Side seams','Leave room for the zip',()=>SeamsScene('aline')),S_('Side zip','Tack, stitch, unpick',()=>ZipScene('aline')),S_('Waistband','Fold & press',()=>WaistbandScene('aline')),S_('Buttonhole','Stitch, then cut',()=>ButtonholeScene('aline')),S_('Button','Cross & shank',()=>ButtonScene('aline')),S_('Hem it','Fold, fold, stitch',()=>HemScene('aline')),S_('Wear it','Your finished skirt',()=>FinalScene('aline'))]},
  {id:'darted',fab:'dress',name:'Fitted dress',level:'Intermediate',sub:'Shaped with darts',title:'A <em>fitted</em> dress.',desc:'Follows the body through the waist. Darts — small stitched folds — turn flat fabric into a 3D shape.',learn:'curved side seams, darts and fitting.',doneTitle:'A dress that <em>fits</em>.',doneMsg:'The darts and curved side seams shape it to your waist. A zip in the back seam makes it easy to get on.',
   steps:[S_('Pattern & grain','Lay it on the fold',()=>LayoutScene('darted','front')),S_('Cut it out','Curved side seams',()=>CutScene('darted','front')),S_('Sew the darts','Flat → 3D',()=>DartScene('darted')),S_('Sew the seams','Shoulders & sides',()=>SeamsScene('darted')),S_('Hem it','Fold, fold, stitch',()=>HemScene('darted')),S_('Wear it','Your fitted dress',()=>FinalScene('darted'))]},
- {id:'shirt',fab:'shirt',name:'Button-up shirt',level:'Intermediate',sub:'Sleeves & buttons',title:'A <em>button-up</em> shirt.',desc:'A relaxed shirt with set-in sleeves and a button front. Works for anyone — just enter chest instead of bust.',learn:'cutting mirror pairs, setting sleeves, buttonholes and sewing buttons.',doneTitle:'Your <em>shirt</em> is done.',doneMsg:'Sleeves, buttons and a neat narrow hem. Add the collar strip from the pattern card for a finished neckline.',cardNote:'Negative “across” values sit left of the centre-front line — that’s the button overlap. Back: cut 1 on the fold, same as the front without the overlap and with a 2.5 cm neck. Collar: a strip (neck measurement + 3) × 9 cm, folded in half.',
+ {id:'pencil',fab:'skirt',name:'Pencil skirt',level:'Intermediate',sub:'Fitted, zip & vent',title:'A <em>pencil skirt</em>.',desc:'A slim skirt that follows the hips and narrows to the knee, with a centre-back zip and a vent so you can walk.',learn:'fitting with darts, a centre-back zip, a vent and a tapered hem.',doneTitle:'A <em>pencil skirt</em>.',doneMsg:'Fitted through the hips with darts, closed with a zip, with a vent so you can walk. Finish the waist with the waistband from the pattern and a hook or button.',cardNote:'Back: the 4 cm extension at the bottom of the centre back is the vent — fold it under. Sew the centre-back seam from the bottom of the zip to the top of the vent.',hemNote:'At the vent, fold the hem up first, then fold the vent edges back over it and slipstitch them down.',
+  seam:{a:'side seam',edge:'SIDE EDGE ↑',rest:'Sew the second side seam the same way, waist to hem. Try it on before you press — side seams are the easiest place to take a skirt in.',btn:'Sew the side seam →'},
+  steps:[S_('Pattern & grain','Front on the fold',()=>LayoutScene('pencil','front')),S_('Cut the front','Hip curves',()=>CutScene('pencil','front')),S_('Cut the back','With the vent',()=>CutScene('pencil','back')),S_('Sew the darts','Shape the waist',()=>DartScene('pencil')),S_('Back zip','Tack, stitch, unpick',()=>ZipScene('pencil')),S_('Side seams','Waist to hem',()=>SeamsScene('pencil')),S_('Hem & vent','Fold, fold, stitch',()=>HemScene('pencil')),S_('Wear it','Your finished skirt',()=>FinalScene('pencil'))]},
+ {id:'shirt',fab:'shirt',name:'Button-up shirt',level:'Intermediate',sub:'Sleeves & buttons',title:'A <em>button-up</em> shirt.',desc:'A relaxed shirt with set-in sleeves and a button front. Works for anyone — just enter chest instead of bust.',learn:'cutting mirror pairs, setting sleeves, buttonholes and sewing buttons.',doneTitle:'Your <em>shirt</em> is done.',doneMsg:'Sleeves, buttons and a neat narrow hem. Add the collar strip from the pattern card for a finished neckline.',cardNote:'Negative “across” values sit left of the centre-front line — that’s the button overlap. The collar band is folded in half lengthwise; interface one half.',seam:{a:'side seam',edge:'SIDE EDGE ↑',rest:'Sew the other side the same way: one long seam from the cuff, up the sleeve, through the armpit and down to the hem.',btn:'Sew the side seam →'},
   steps:[S_('Pattern & grain','A pair, not a fold',()=>LayoutScene('shirt','front')),S_('Cut the fronts','Left & right',()=>CutScene('shirt','front')),S_('Cut the sleeves','On the fold',()=>CutScene('shirt','sleeve')),S_('Set the sleeves','Match the notches',()=>SleeveScene('shirt')),S_('Side seams','Armpit to hem',()=>SeamsScene('shirt')),S_('Buttonholes','Space, stitch, cut',()=>ButtonholeScene('shirt')),S_('Buttons','Cross & shank',()=>ButtonScene('shirt')),S_('Hem it','Narrow & neat',()=>HemScene('shirt')),S_('Wear it','Your finished shirt',()=>FinalScene('shirt'))]},
- {id:'jeans',fab:'denim',name:'Jeans',level:'Advanced',sub:'Denim, topstitching, fly',title:'A pair of <em>jeans</em>.',desc:'Classic five-pocket-style jeans with tough flat-felled seams and gold topstitching. Denim is thick — use a heavy needle and a thimble.',learn:'trouser cutting, patch pockets, flat-felled seams, fly topstitching and waistbands.',doneTitle:'You made <em>jeans</em>.',doneMsg:'Flat-felled seams, topstitching, a fly and a button — the hardest everyday garment there is. Hammer the bulky seams flat; it really helps.',cardNote:'Back leg: trace the front leg, extend the crotch point 4 cm, raise the back waist 3 cm at the centre and add 1.5 cm at the side seam. Waistband: (waist + 4) × 8 cm. Fly facing: 5 × 20 cm. Use an 18 cm zip.',
+ {id:'jeans',fab:'denim',name:'Jeans',level:'Advanced',sub:'Denim & topstitching',title:'A pair of <em>jeans</em>.',desc:'Classic five-pocket-style jeans with tough flat-felled seams and gold topstitching. Denim is thick — use a heavy needle and a thimble.',learn:'trouser cutting, patch pockets, flat-felled seams, fly topstitching and waistbands.',doneTitle:'You made <em>jeans</em>.',doneMsg:'Flat-felled seams, topstitching, a fly and a button — the hardest everyday garment there is. Hammer the bulky seams flat; it really helps.',cardNote:'The back leg has a deeper crotch and a higher centre back; take the marked dart out at the back waist (or cut it off as a yoke). Use an 18 cm jeans zip.',
   steps:[S_('Pattern & grain','Leg on the grain',()=>LayoutScene('jeans','front')),S_('Cut the legs','Crotch curve',()=>CutScene('jeans','front')),S_('Back pockets','Place & topstitch',()=>PocketScene('jeans')),S_('Flat-felled seams','Trim, fold, stitch',()=>FellScene('jeans')),S_('Fly zip','The J-curve',()=>FlyScene('jeans')),S_('Waist button','Strong shank',()=>ButtonScene('jeans')),S_('Hem it','Gold topstitch',()=>HemScene('jeans')),S_('Wear it','Your finished jeans',()=>FinalScene('jeans'))]},
- {id:'suit',fab:'suit',name:'Suit',level:'Advanced',sub:'Jacket + trousers',title:'A <em>suit</em>.',desc:'An unlined jacket with notched lapels, and matching trousers. Tailoring is mostly pressing and patience.',learn:'lapels, interfacing, darts, sleeves, pressing roll lines and creases.',doneTitle:'You made a <em>suit</em>.',doneMsg:'An unlined jacket with real lapels, plus trousers with a sharp crease. Full tailoring adds a lining and canvas — your next adventure.',cardNote:'Jacket back: cut 1 on the fold, like the shirt back but 2 cm wider at the shoulder. Collar: a curved strip, 9 cm deep, cut double with interfacing. Trousers: cut like the jeans leg (included below) but sew plain pressed seams.',
+ {id:'suit',fab:'suit',name:'Suit',level:'Advanced',sub:'Jacket + trousers',title:'A <em>suit</em>.',desc:'An unlined jacket with notched lapels, and matching trousers. Tailoring is mostly pressing and patience.',learn:'lapels, interfacing, darts, sleeves, pressing roll lines and creases.',doneTitle:'You made a <em>suit</em>.',doneMsg:'An unlined jacket with real lapels, plus trousers with a sharp crease. Full tailoring adds a lining and canvas — your next adventure.',cardNote:'The collar is a simplified straight strip — trim it to fit the neckline. The jacket is unlined: finish the inside seams by folding the edges under and stitching. Trousers: sew plain seams pressed open.',
   steps:[S_('Pattern & grain','Jacket front',()=>LayoutScene('suit','front')),S_('Cut the jacket','Notched lapel',()=>CutScene('suit','front')),S_('Interfacing','Fuse the front',()=>InterfacingScene('suit')),S_('Darts','Shape the waist',()=>DartScene('suit')),S_('Set the sleeves','Match the notches',()=>SleeveScene('suit')),S_('Roll the lapel','Press the roll line',()=>LapelScene('suit')),S_('Buttonholes','Space, stitch, cut',()=>ButtonholeScene('suit')),S_('Buttons','Cross & shank',()=>ButtonScene('suit')),S_('Trouser crease','A sharp press',()=>CreaseScene('suit')),S_('Wear it','Your finished suit',()=>FinalScene('suit'))]}];
 const projOf=id=>PROJ.find(p=>p.id===id);
 const fabList=id=>FAB[(projOf(id)||{}).fab||'dress'];
-const fabOf=id=>state.fab[id]||fabList(id)[0].c;
+const fabOf=id=>id==='basics'?'#e3d5bd':state.fab[id]||fabList(id)[0].c;
 const projProg=id=>projOf(id).steps.filter((s,i)=>state.done[id+'.'+i]).length;
 function lum(hex){const c=hex2rgb(hex);return(.299*c[0]+.587*c[1]+.114*c[2])/255;}
 function chalkCol(hex){return lum(hex)>.6?'rgba(40,90,170,.75)':'rgba(255,255,255,.88)';}
@@ -247,7 +273,7 @@ function swatches(id){const list=fabList(id);const w=document.createElement('div
 let curP=null,curI=-1;
 const stepsOf=id=>id==='basics'?BASICS:projOf(id).steps;
 const keyOf=(id,i)=>id==='basics'?'b'+i:id+'.'+i;
-function KICK(){if(curP==='basics')return`Basics <b>${curI+1}</b> of 4 · ${BASICS[curI].name}`;const p=projOf(curP);if(curI<0)return`Project · ${p.level}`;return`${p.name} · step <b>${curI+1}</b> of ${p.steps.length} · ${p.steps[curI].name}`;}
+function KICK(){if(curP==='basics')return`Basics <b>${curI+1}</b> of ${BASICS.length} · ${BASICS[curI].name}`;const p=projOf(curP);if(curI<0)return`Project · ${p.level}`;return`${p.name} · step <b>${curI+1}</b> of ${p.steps.length} · ${p.steps[curI].name}`;}
 function dots(){$dots.innerHTML='';const list=curP?stepsOf(curP):[];list.forEach((c,i)=>{const e=document.createElement('i');if(state.done[keyOf(curP,i)])e.className='done';if(i===curI)e.className='cur';e.title=c.name;$dots.appendChild(e);});const b=$('back');b.style.visibility=curP?'visible':'hidden';b.textContent=curP&&curP!=='basics'&&curI>=0?'← '+projOf(curP).name:'← Home';}
 function modal(html,mount){$modal.innerHTML=`<div class="card">${html}</div>`;$modal.hidden=false;mount&&mount($modal);}
 function closeModal(){$modal.hidden=true;$modal.innerHTML='';}
@@ -259,9 +285,28 @@ function replay(){startStep(curP,curI);}
 function home(){curP=null;curI=-1;go(HomeScene());}
 function openProject(id){curP=id;curI=-1;go(ProjectScene(id));}
 $('back').onclick=()=>{tick();if(curP&&curP!=='basics'&&curI>=0)openProject(curP);else home();};
+// real-world tips shown after every step
+const IRL_B=['Cut real thread about as long as your arm. Snip it at a slant or wet the tip before threading — and a needle threader costs pennies.','Practise on a scrap of cotton first. Load 3 or 4 stitches onto the needle before pulling it through: it’s faster and straighter.','Use this for every seam. On real fabric keep stitches 3–5 mm, and pull them snug but not tight, or the seam will pucker.','Measure over thin clothes with the tape level all the way round. Ask a friend to check the back, and write the numbers down.','Use doubled thread. Lay a matchstick or pin across the button while you stitch, then pull it out and wrap the shank.','Sewing a zip by hand is easier than by machine. Tack it in place first, then use tiny backstitches 6–8 mm from the teeth.'];
+const IRL=[[/grain/i,'Pin every 10–15 cm, inside the seam allowance, or weigh the paper down with tins. Measure from both ends of the grain arrow to the fold — the two numbers must match.'],
+ [/^Cut/i,'Keep the fabric flat and use long, smooth strokes with the lower blade on the table. Mark notches with a tiny 3 mm snip.'],
+ [/seam/i,'Pin with the heads towards you, stitch 1.5 cm from the edge, and press each seam before another one crosses it. Overcast the raw edges so they don’t fray.'],
+ [/Hem/i,'Press the folds first, pin every 5 cm and try the garment on before you stitch — the hem is the easiest place to fix the length.'],
+ [/Gather/i,'Use strong thread for the gathering rows and leave 10 cm tails. Pin the side seams and centres together first, then spread the gathers between them.'],
+ [/dart/i,'Chalk the dart on the wrong side, fold through its middle, pin, and stitch from the wide end to the point. Tie a knot at the tip instead of backstitching.'],
+ [/sleeve/i,'Match the shoulder dot and the notches first, then pin in between. Sew with the sleeve on top so you can smooth out small puckers.'],
+ [/Buttonhole/i,'Practise on a doubled scrap first. Put a pin across the end of the buttonhole before cutting so the scissors can’t overshoot.'],
+ [/Button/i,'Close the garment and push a pin through each buttonhole to mark exactly where its button goes.'],
+ [/pocket/i,'Press the pocket edges under before pinning, and use a ruler so both pockets sit at the same height and angle.'],
+ [/fell/i,'Trim to an even 6 mm so the fold is easy. Press the fold flat and pin it before topstitching.'],
+ [/zip|fly/i,'Tack the zip in place with big stitches first so it can’t shift, then stitch, then pull the tacking out.'],
+ [/Interfacing/i,'Test fusible interfacing on a scrap. Use a press cloth, press — don’t slide — and let it cool before you move it.'],
+ [/lapel|crease/i,'Steam it, then let it cool flat before moving: cooling is what sets the shape. A damp tea towel makes a fine press cloth.'],
+ [/Elastic/i,'Pin the far end of the elastic to the casing so it can’t disappear inside, and try the trousers on before joining the ends.'],
+ [/Waistband/i,'Pressing the waistband before attaching it makes the inside neat and easy to sew.']];
+function irl(id,i){let tip='';if(id==='basics')tip=IRL_B[i]||'';else{const nm=stepsOf(id)[i].name;if(/^Wear/.test(nm))return'';const r=IRL.find(r=>r[0].test(nm));tip=r?r[1]:'';}return tip?`<div class="irl"><b>Doing it for real:</b> ${tip}</div>`:'';}
 function DONE(msg,title){const id=curP,i=curI;state.done[keyOf(id,i)]=true;save();chime();burst(500,260,48);const L=stepsOf(id);let nx;
   if(i<L.length-1)nx={label:id==='basics'?'Next lesson →':'Next step →',fn:()=>startStep(id,i+1)};else nx=id==='basics'?{label:'Choose a project →',fn:home}:{label:'Back to the project',fn:()=>openProject(id)};
-  ui({kicker:KICK()+' · <b style="color:var(--ok)">complete</b>',title:title||$title.innerHTML,msg,b1:nx,b2:{label:'Replay',fn:replay}});}
+  ui({kicker:KICK()+' · <b style="color:var(--ok)">complete</b>',title:title||$title.innerHTML,msg,extra:irl(id,i),b1:nx,b2:{label:'Replay',fn:replay}});}
 
 // ───────────────────────── pattern drafting (cm)
 function E(name,a,b,c){return c?{name,kind:'curve',a,b,c}:{name,kind:'line',a,b};}
@@ -269,21 +314,51 @@ function bbox(pts){let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;for(const p of pts){if(p.x<
 function edgePts(e,n=14){return e.kind==='line'?[e.a,e.b]:sampleQuad(e.a,e.c,e.b,n);}
 function piece(name,cut,onFold,edges,x={}){const poly=[];edges.forEach(e=>edgePts(e).forEach((p,i)=>{if(i||!poly.length)poly.push(p);}));if(!onFold)poly.pop();return{name,cut,onFold,edges,poly,bb:bbox(poly),...x};}
 const r1=v=>Math.round(v*10)/10;
-function trouser(m,ease){const wW=r1(m.waist/4+1+ease*.5),hipW=r1(m.hip/4+1+ease),ext=r1(m.hip/16),rise=r1(m.hip/4+1),O=m.outseam,cx=r1((hipW-ext)/2),knee=r1(rise+(O-rise)/2-4),hw=r1(9.5+ease*.4);
-  return piece(ease?'Trouser front':'Front leg','Cut 2 (a left & a right)',false,[E('waist',P(1.5,0),P(wW+1.5,0)),E('hip curve',P(wW+1.5,0),P(hipW,rise),P(hipW+.3,7)),E('outseam',P(hipW,rise),P(cx+hw,O)),E('hem',P(cx+hw,O),P(cx-hw,O)),E('inseam',P(cx-hw,O),P(-ext,rise),P(cx-hw-1,knee)),E('crotch curve',P(-ext,rise),P(0,rise-8),P(0,rise)),E('centre front',P(0,rise-8),P(1.5,0))],{cx,rise,wW,hipW,ext,O});}
+const arcLen=e=>{const p=edgePts(e,40);let s=0;for(let i=1;i<p.length;i++)s+=dist(p[i],p[i-1]);return s;};
+function rectP(name,cut,w,h,x={}){return piece(name,cut,false,[E('top',P(0,0),P(w,0)),E('side',P(w,0),P(w,h)),E('bottom',P(w,h),P(0,h)),E('side',P(0,h),P(0,0))],{noSA:true,...x});}
+function withNeck(pc,name,cut,dep){return piece(name,cut,pc.onFold,pc.edges.map(e=>e.name==='neckline'?E('neckline',e.a,P(0,dep),P(e.a.x,dep)):e),{marks:pc.marks,seams:pc.seams});}
+const fisheye=(x,y,up,dn,w)=>[[P(x,y-up),P(x+w,y),P(x,y+dn),P(x-w,y),P(x,y-up)]];
+function trouser(m,ease){const wW=r1(m.waist/4+1+ease*.5),hipW=r1(m.hip/4+1+ease),ext=r1(m.hip/16),rise=r1(m.hip/4+1),O=r1(m.outseam+3),cx=r1((hipW-ext)/2),knee=r1(rise+(O-rise)/2-4),hw=r1(9.5+ease*.4);
+  return piece(ease?'Trouser front':'Front leg','Cut 2 (a left & a right)',false,[E('waist',P(1.5,0),P(wW+1.5,0)),E('hip curve',P(wW+1.5,0),P(hipW,rise),P(hipW+.3,7)),E('outseam',P(hipW,rise),P(cx+hw,O)),E('hem',P(cx+hw,O),P(cx-hw,O)),E('inseam',P(cx-hw,O),P(-ext,rise),P(cx-hw-1,knee)),E('crotch curve',P(-ext,rise),P(0,rise-8),P(0,rise)),E('centre front',P(0,rise-8),P(1.5,0))],{cx,rise,wW,hipW,ext,O,hw,knee});}
+function trouserBack(f,ease){const ext=r1(f.ext+3.5),hip=r1(f.hipW+2),wB=r1(f.wW+2.5),hw=f.hw+1,rise=f.rise,yAt=x=>-3+3*(x-2.5)/wB,xc=r1(2.5+wB*.45);
+  return piece(ease?'Trouser back':'Back leg','Cut 2 (a left & a right)',false,[E('waist',P(2.5,-3),P(wB+2.5,0)),E('hip curve',P(wB+2.5,0),P(hip,rise),P(hip+.3,7)),E('outseam',P(hip,rise),P(f.cx+hw,f.O)),E('hem',P(f.cx+hw,f.O),P(f.cx-hw,f.O)),E('inseam',P(f.cx-hw,f.O),P(-ext,rise+1),P(f.cx-hw-1,f.knee)),E('crotch curve',P(-ext,rise+1),P(1,rise-9),P(.5,rise+1)),E('centre back',P(1,rise-9),P(2.5,-3))],{marks:[[P(xc-1.25,yAt(xc-1.25)),P(xc,yAt(xc)+10),P(xc+1.25,yAt(xc+1.25))]]});}
 function drafts(m){const B=m.bust,Wa=m.waist,Hp=m.hip,L=m.length,A=m.arm,D={};
   {const qB=r1(B/4+3.5),qH=r1(Hp/4+4),armD=r1(B/8+9.5),hemW=r1(Math.max(qB,qH)+4),Lh=L+3;
-   D.shift={front:piece('Front','Cut 1 on fold (and a back with a 3 cm neckline)',true,[E('hem',P(0,Lh),P(hemW,Lh)),E('side seam',P(hemW,Lh),P(qB,armD)),E('armhole',P(qB,armD),P(18.5,4),P(qB-7.5,armD-3)),E('shoulder',P(18.5,4),P(7.5,0)),E('neckline',P(7.5,0),P(0,9),P(7.5,9))],{seams:['shoulder','side seam']})};}
+   const fr=piece('Front','Cut 1 on fold',true,[E('hem',P(0,Lh),P(hemW,Lh)),E('side seam',P(hemW,Lh),P(qB,armD)),E('armhole',P(qB,armD),P(18.5,4),P(qB-7.5,armD-3)),E('shoulder',P(18.5,4),P(7.5,0)),E('neckline',P(7.5,0),P(0,9),P(7.5,9))],{seams:['shoulder','side seam']});
+   D.shift={front:fr,xp:[fr,withNeck(fr,'Back','Cut 1 on fold',3)]};}
   {const qB=r1(B/4+3.5),armD=r1(B/8+9.5),wy=r1(B/8+29),qW=r1(Wa/4+3.5),sw=r1(qW*1.8+1.5),sl=r1(L-wy+4.5);
    D.sundress={wy,qW,sw,sl,bodice:piece('Bodice','Cut 2 on fold (front & back)',true,[E('waist',P(0,wy),P(qW,wy)),E('side seam',P(qW,wy),P(qB,armD)),E('armhole',P(qB,armD),P(12.5,2),P(qB-6,armD-5)),E('strap',P(12.5,2),P(7.5,0)),E('neckline',P(7.5,0),P(0,13),P(7.5,13))]),skirt:piece('Skirt','Cut 2 on fold (front & back)',true,[E('top edge',P(0,0),P(sw,0)),E('side seam',P(sw,0),P(sw,sl)),E('hem',P(sw,sl),P(0,sl))])};}
-  {const qB=r1(B/4+3.5),armD=r1(B/8+9.5),wy=r1(B/8+29),qW=r1(Wa/4+6.5),qH=r1(Hp/4+3.5),hemW=r1(qH+3),Lh=L+3;
-   D.darted={wy,dart:{x:r1(qB*.45),y:wy},front:piece('Front','Cut 1 on fold',true,[E('hem',P(0,Lh),P(hemW,Lh)),E('lower side seam',P(hemW,Lh),P(qW,wy),P(qH+1.5,wy+18)),E('upper side seam',P(qW,wy),P(qB,armD)),E('armhole',P(qB,armD),P(18.5,4),P(qB-7.5,armD-3)),E('shoulder',P(18.5,4),P(7.5,0)),E('neckline',P(7.5,0),P(0,9),P(7.5,9))],{seams:['shoulder','upper side seam','lower side seam']})};}
+  {const qB=r1(B/4+3.5),armD=r1(B/8+9.5),wy=r1(B/8+29),qW=r1(Wa/4+6.5),qH=r1(Hp/4+3.5),hemW=r1(qH+3),Lh=L+3,dx=r1(qB*.45);
+   const fr=piece('Front','Cut 1 on fold',true,[E('hem',P(0,Lh),P(hemW,Lh)),E('lower side seam',P(hemW,Lh),P(qW,wy),P(qH+1.5,wy+18)),E('upper side seam',P(qW,wy),P(qB,armD)),E('armhole',P(qB,armD),P(18.5,4),P(qB-7.5,armD-3)),E('shoulder',P(18.5,4),P(7.5,0)),E('neckline',P(7.5,0),P(0,9),P(7.5,9))],{seams:['shoulder','upper side seam','lower side seam'],marks:fisheye(dx,wy,12,12,1.5)});
+   D.darted={wy,dart:{x:dx,y:wy},front:fr,xp:[fr,withNeck(fr,'Back','Cut 1 on fold',3)]};}
+  {const qB=r1(B/4+6),ua=r1(B/8+19),Lt=r1(L*.62);
+   const fr=piece('Front','Cut 1 on fold',true,[E('hem',P(0,Lt),P(qB+1.5,Lt)),E('side seam',P(qB+1.5,Lt),P(qB,ua)),E('underarm',P(qB,ua),P(qB+12,ua-8),P(qB+1,ua-7)),E('sleeve hem',P(qB+12,ua-8),P(qB+12,4.5)),E('shoulder',P(qB+12,4.5),P(7.5,0)),E('neckline',P(7.5,0),P(0,8),P(7.5,8))],{seams:['shoulder','underarm','side seam']});
+   const bk=withNeck(fr,'Back','Cut 1 on fold',2.5);fr.cut='Cut 2 on fold (front & back)';const fr2=withNeck(fr,'Front','Cut 1 on fold',8);
+   D.top={front:fr,xp:[fr2,bk,rectP('Neck binding','Cut 1 on the bias',3.5,r1(2*(arcLen(fr.edges[5])+arcLen(bk.edges[5]))+3),{grain:45})]};}
+  {const hipW=r1(Hp/4+3.5),ext=r1(Hp/16+.5),rise=r1(Hp/4+2),O=r1(m.outseam+3),tp=-4.5,eb=r1(ext+3.5);
+   const fr=piece('Front leg','Cut 2 (a left & a right)',false,[E('waist',P(0,tp),P(hipW,tp)),E('outseam',P(hipW,tp),P(hipW-2,O)),E('hem',P(hipW-2,O),P(-ext+2,O)),E('inseam',P(-ext+2,O),P(-ext,rise)),E('crotch curve',P(-ext,rise),P(0,rise-8),P(0,rise)),E('centre front',P(0,rise-8),P(0,tp))],{seams:['outseam','inseam'],rise,hipW,ext,O,noSAe:['waist'],marks:[[P(0,0),P(hipW,0)]]});
+   const bk=piece('Back leg','Cut 2 (a left & a right)',false,[E('waist',P(1.5,tp-3),P(hipW+1,tp)),E('outseam',P(hipW+1,tp),P(hipW-1,O)),E('hem',P(hipW-1,O),P(-eb+3,O)),E('inseam',P(-eb+3,O),P(-eb,rise+.5)),E('crotch curve',P(-eb,rise+.5),P(.5,rise-9),P(.3,rise+.5)),E('centre back',P(.5,rise-9),P(1.5,tp-3))],{noSAe:['waist'],marks:[[P(1.05,-3),P(hipW+1,0)]]});
+   D.pants={front:fr,back:bk,elastic:r1(Wa*.9),xp:[fr,bk]};}
+  {const qW=r1(Wa/4+4.5),qH=r1(Hp/4+2.5),hy=19,sl=r1(m.outseam*.6+3),hemW=r1(qH+9),dx=r1(qW*.45);
+   const mk=(nm,cut,dl)=>piece(nm,cut,true,[E('hem',P(0,sl),P(hemW,sl-1.5),P(hemW*.55,sl)),E('side seam',P(hemW,sl-1.5),P(qH,hy)),E('hip curve',P(qH,hy),P(qW,0),P(qH,6)),E('waist',P(qW,0),P(0,0))],{seams:['side seam','hip curve'],marks:[[P(dx-1.25,0),P(dx,dl),P(dx+1.25,0)]]});
+   D.aline={front:mk('Front','Cut 2 on fold (front & back)',9),dart:{x:dx,l:9},qW,sl,wb:r1(Wa/4),xp:[mk('Front','Cut 1 on fold',9),mk('Back','Cut 1 on fold',12),rectP('Waistband','Cut 1 (interface half)',9,r1(Wa+6))]};}
+  {const qW=r1(Wa/4+5),qH=r1(Hp/4+2.5),hy=20,sl=r1(m.outseam*.55+4),hemW=r1(qH-2.5),dx=r1(qW*.42);
+   const fr=piece('Front','Cut 1 on fold',true,[E('hem',P(0,sl),P(hemW,sl)),E('side seam',P(hemW,sl),P(qH,hy)),E('hip curve',P(qH,hy),P(qW,0),P(qH,7)),E('waist',P(qW,0),P(0,0))],{seams:['side seam','hip curve'],marks:[[P(dx-1.5,0),P(dx,10),P(dx+1.5,0)]]});
+   const bk=piece('Back','Cut 2 (a left & a right)',false,[E('waist',P(0,0),P(qW,0)),E('hip curve',P(qW,0),P(qH,hy),P(qH,7)),E('side seam',P(qH,hy),P(hemW,sl)),E('hem',P(hemW,sl),P(-4,sl)),E('vent',P(-4,sl),P(-4,sl-18)),E('vent top',P(-4,sl-18),P(0,sl-22)),E('centre back',P(0,sl-22),P(0,0))],{marks:[[P(dx-1.75,0),P(dx,14),P(dx+1.75,0)]]});
+   D.pencil={front:fr,back:bk,dart:{x:dx,l:10},qW,sl,wb:r1(Wa/4),xp:[fr,bk,rectP('Waistband','Cut 1 (interface half)',9,r1(Wa+6))]};}
   {const qB=r1(B/4+4.5),armD=r1(B/8+10.5),sl=r1(L*.78),x=-2.5,capH=r1(armD*.62),bw=r1(B*.17+2.5);
-   D.shirt={sl,armD,sp:P(19.5,4.5),front:piece('Front','Cut 2 (a left & a right)',false,[E('hem',P(x,sl),P(qB+1,sl)),E('side seam',P(qB+1,sl),P(qB,armD)),E('armhole',P(qB,armD),P(19.5,4.5),P(qB-7.5,armD-3)),E('shoulder',P(19.5,4.5),P(7.5,0)),E('neckline',P(7.5,0),P(x,8),P(7,8.5)),E('front edge',P(x,8),P(x,sl))],{seams:['shoulder','side seam']}),sleeve:piece('Sleeve','Cut 2 on fold',true,[E('cuff edge',P(0,A),P(12,A)),E('underarm seam',P(12,A),P(bw,capH)),E('sleeve cap',P(bw,capH),P(0,0),P(bw*.6,.5))])};}
-  D.jeans={front:trouser(m,0),pocket:[P(0,0),P(15,0),P(15,13.5),P(7.5,16),P(0,13.5)]};
-  {const qB=r1(B/4+5.5),armD=r1(B/8+11),jl=r1(L*.76),wy=r1(B/8+29),qW=r1(Wa/4+6.5),hs=r1(Hp/4+5),x=-2.5,bp=r1(wy-4),capH=r1(armD*.62),bw=r1(B*.17+4);
-   D.suit={jl,wy,bp,sp:P(20,4.5),dart:{x:r1(qB*.42),y:wy},front:piece('Jacket front','Cut 2 (a left & a right)',false,[E('shoulder',P(8.5,0),P(20,4.5)),E('armhole',P(20,4.5),P(qB,armD),P(qB-7,armD-3)),E('side seam',P(qB,armD),P(hs,jl),P(qW,wy)),E('hem',P(hs,jl),P(x,jl-7),P(x+1,jl+.5)),E('front edge',P(x,jl-7),P(x,bp)),E('lapel',P(x,bp),P(-8,11)),E('notch',P(-8,11),P(-3,8.5)),E('gorge',P(-3,8.5),P(8.5,0))]),
-    interf:[P(-8,11),P(x,bp),P(x,jl-7),P(6,jl-5),P(6,9),P(-3,8.5)],roll:[P(x,bp),P(7,1.5)],sleeve:piece('Sleeve','Cut 2 on fold',true,[E('cuff edge',P(0,A+2),P(14,A+2)),E('underarm seam',P(14,A+2),P(bw,capH)),E('sleeve cap',P(bw,capH),P(0,0),P(bw*.6,.5))]),trouser:trouser(m,2.5)};}
+   const fr=piece('Front','Cut 2 (a left & a right)',false,[E('hem',P(x,sl),P(qB+1,sl)),E('side seam',P(qB+1,sl),P(qB,armD)),E('armhole',P(qB,armD),P(19.5,4.5),P(qB-7.5,armD-3)),E('shoulder',P(19.5,4.5),P(7.5,0)),E('neckline',P(7.5,0),P(x,8),P(7,8.5)),E('front edge',P(x,8),P(x,sl))],{seams:['shoulder','side seam']});
+   const bk=piece('Back','Cut 1 on fold',true,[E('hem',P(0,sl),P(qB+1,sl)),E('side seam',P(qB+1,sl),P(qB,armD)),E('armhole',P(qB,armD),P(19.5,4.5),P(qB-7.5,armD-3)),E('shoulder',P(19.5,4.5),P(7.5,0)),E('neckline',P(7.5,0),P(0,2.5),P(7.5,2.5))]);
+   const sv=piece('Sleeve','Cut 2 on fold',true,[E('cuff edge',P(0,A),P(12,A)),E('underarm seam',P(12,A),P(bw,capH)),E('sleeve cap',P(bw,capH),P(0,0),P(bw*.6,.5))]);
+   D.shirt={sl,armD,sp:P(19.5,4.5),front:fr,sleeve:sv,xp:[fr,bk,sv,rectP('Collar band','Cut 2 (interface one)',9,r1(2*(arcLen(fr.edges[4])+arcLen(bk.edges[4]))+3))]};}
+  {const fr=trouser(m,0),pk=piece('Back pocket','Cut 2',false,[E('top',P(0,0),P(15,0)),E('side',P(15,0),P(15,13.5)),E('point',P(15,13.5),P(7.5,16)),E('point',P(7.5,16),P(0,13.5)),E('side',P(0,13.5),P(0,0))],{noSA:true});
+   D.jeans={front:fr,pocket:[P(0,0),P(15,0),P(15,13.5),P(7.5,16),P(0,13.5)],xp:[fr,trouserBack(fr,0),pk,rectP('Waistband','Cut 1 (interface half)',8,r1(Wa+4)),rectP('Fly facing','Cut 2',5,20)]};}
+  {const qB=r1(B/4+5.5),armD=r1(B/8+11),jl=r1(L*.76),wy=r1(B/8+29),qW=r1(Wa/4+6.5),hs=r1(Hp/4+5),x=-2.5,bp=r1(wy-4),capH=r1(armD*.62),bw=r1(B*.17+4),dx=r1(qB*.42);
+   const fr=piece('Jacket front','Cut 2 (a left & a right)',false,[E('shoulder',P(8.5,0),P(20,4.5)),E('armhole',P(20,4.5),P(qB,armD),P(qB-7,armD-3)),E('side seam',P(qB,armD),P(hs,jl),P(qW,wy)),E('hem',P(hs,jl),P(x,jl-7),P(x+1,jl+.5)),E('front edge',P(x,jl-7),P(x,bp)),E('lapel',P(x,bp),P(-8,11)),E('notch',P(-8,11),P(-3,8.5)),E('gorge',P(-3,8.5),P(8.5,0))],{marks:fisheye(dx,wy,10,8,1)});
+   const bk=piece('Jacket back','Cut 1 on fold',true,[E('hem',P(0,jl),P(hs-1,jl)),E('side seam',P(hs-1,jl),P(qB-1,armD),P(qW-1,wy)),E('armhole',P(qB-1,armD),P(20.5,4.5),P(qB-8,armD-3)),E('shoulder',P(20.5,4.5),P(8.5,0)),E('neckline',P(8.5,0),P(0,2.5),P(8.5,2.5))]);
+   const sv=piece('Sleeve','Cut 2 on fold',true,[E('cuff edge',P(0,A+2),P(14,A+2)),E('underarm seam',P(14,A+2),P(bw,capH)),E('sleeve cap',P(bw,capH),P(0,0),P(bw*.6,.5))]),tr=trouser(m,2.5);
+   D.suit={jl,wy,bp,sp:P(20,4.5),dart:{x:dx,y:wy},front:fr,interf:[P(-8,11),P(x,bp),P(x,jl-7),P(6,jl-5),P(6,9),P(-3,8.5)],roll:[P(x,bp),P(7,1.5)],sleeve:sv,trouser:tr,
+    xp:[fr,bk,sv,rectP('Collar','Cut 2 (interface one)',9,r1(2*(arcLen(bk.edges[4])+dist(P(-3,8.5),P(8.5,0))*.6)+3)),tr,trouserBack(tr,2.5),rectP('Waistband','Cut 1 (interface half)',8,r1(Wa+4))]};}
   return D;}
 let _dr=null,_drk='';
 function DR(){const k=JSON.stringify(state.m);if(k!==_drk){_drk=k;_dr=drafts(state.m);}return _dr;}
@@ -482,46 +557,120 @@ function chainRopes(B,isDone){const port=(b,s)=>P(b.x+s*(b.w/2+5),b.y-12);const 
 function stepBlock(b,num,name,sub,done,pulse,t,ports=true){const y=b.y-b.lift*3;metal(b.x-b.w/2,y-b.h/2,b.w,b.h,18,{sb:16+b.lift*10,so:8+b.lift*4});
   if(ports)for(const s of[-1,1])for(let j=0;j<2;j++)dot(P(b.x+s*(b.w/2+5),y-12+j*24),4.2,'rgba(0,0,0,.13)');
   font(12,600);ctx.fillStyle='rgba(29,32,39,.4)';ctx.textAlign='left';ctx.textBaseline='alphabetic';ctx.fillText(num,b.x-b.w/2+18,y-b.h/2+28);
-  font(18,700);ctx.fillStyle=INK;ctx.fillText(name,b.x-b.w/2+18,y+8);font(13,500);ctx.fillStyle='rgba(29,32,39,.55)';ctx.fillText(sub,b.x-b.w/2+18,y+29);
+  font(b.w<170?16:18,700);ctx.fillStyle=INK;ctx.fillText(name,b.x-b.w/2+18,y+8);font(13,500);ctx.fillStyle='rgba(29,32,39,.55)';ctx.fillText(sub,b.x-b.w/2+18,y+29);
   if(done)drawCheck(b.x+b.w/2-24,y-b.h/2+24);else if(pulse){ctx.save();ctx.globalAlpha=.55+.45*Math.sin(t*3);dot(P(b.x+b.w/2-24,y-b.h/2+24),5,CORAL);ctx.restore();}}
 function drawIcon(id,cx,cy,h,w){const sh=garmentShapes(id);const all=sh.flatMap(s=>s.pts);const {M}=fitMap(all,{x:cx-w/2,y:cy-h/2,w,h});const hex=fabOf(id);sh.forEach(s=>{const pts=s.pts.map(M);ctx.save();path(pts);shadow(6,3,.18);ctx.fillStyle=hex;ctx.fill();noShadow();ctx.fillStyle=weave(s.sh?shade(hex,s.sh):hex);ctx.fill();ctx.strokeStyle='rgba(0,0,0,.12)';ctx.lineWidth=.8;ctx.stroke();ctx.restore();});}
-function HomeScene(){let t=0,hov=-1,mode=null,B=[],ropes=[],labels=[];const bDone=i=>!!state.done['b'+i];
-  function place(){const m=portrait?2:4;if(m===mode)return;mode=m;B=[];labels=[];
-    if(m===4){labels.push(['THE BASICS',36,46]);BASICS.forEach((b,i)=>B.push({k:'b',i,x:145+i*237,y:115,w:212,h:108,lift:0}));labels.push(['PROJECTS',36,222]);PROJ.forEach((p,i)=>B.push({k:'p',i,x:200+(i%3)*300,y:315+((i/3)|0)*172,w:276,h:150,lift:0}));}
-    else{labels.push(['THE BASICS',36,30]);BASICS.forEach((b,i)=>B.push({k:'b',i,x:175+(i%2)*310,y:100+((i/2)|0)*132,w:282,h:108,lift:0}));labels.push(['PROJECTS',36,335]);PROJ.forEach((p,i)=>B.push({k:'p',i,x:175+(i%2)*310,y:430+((i/2)|0)*174,w:282,h:150,lift:0}));}
-    ropes=chainRopes(B.slice(0,4),bDone);}
+function projTile(b,p,t){const y=b.y-b.lift*3,x0=b.x-b.w/2,wide=b.w>240;metal(x0,y-b.h/2,b.w,b.h,18,{sb:16+b.lift*10,so:8+b.lift*4});
+  if(wide)drawIcon(p.id,b.x+b.w/2-48,y,b.h-34,70);else drawIcon(p.id,x0+b.w-40,y-b.h/2+50,70,50);
+  const lv=p.level;font(11,700);const tw=ctx.measureText(lv).width+14;rr(x0+14,y-b.h/2+14,tw,20,10);ctx.fillStyle=lv.startsWith('Adv')?'rgba(29,32,39,.85)':lv.startsWith('Inter')?rgba(CORAL,.9):'rgba(63,155,107,.85)';ctx.fill();ctx.fillStyle='#fff';ctx.textAlign='left';ctx.textBaseline='alphabetic';ctx.fillText(lv,x0+21,y-b.h/2+28);
+  const ny=wide?y+12:y+28;font(wide?19:16.5,700);ctx.fillStyle=INK;ctx.fillText(p.name,x0+16,ny);font(12,500);ctx.fillStyle='rgba(29,32,39,.55)';ctx.fillText(p.sub,x0+16,ny+18);
+  const pr=projProg(p.id),n=p.steps.length,bw=wide?120:b.w-78,by=y+b.h/2-22;rr(x0+16,by,bw,5,3);ctx.fillStyle='rgba(0,0,0,.08)';ctx.fill();if(pr){rr(x0+16,by,bw*pr/n,5,3);ctx.fillStyle=CORAL;ctx.fill();}font(11,600);ctx.fillStyle='rgba(29,32,39,.45)';ctx.fillText(`${pr}/${n}`,x0+24+bw,by+5);
+  if(pr===n)drawCheck(x0+b.w-22,wide?y-b.h/2+22:by+2);}
+function HomeScene(){let t=0,hov=-1,mode=null,B=[],ropes=[],labels=[],CH=600,scroll=0,vel=0,dr=null,vh=600;const bDone=i=>!!state.done['b'+i],NB=BASICS.length;
+  function place(){const m=portrait?2:5;if(m===mode)return;mode=m;B=[];labels=[];
+    if(m===5){labels.push(['THE BASICS',36,46]);BASICS.forEach((b,i)=>B.push({k:'b',i,x:100+i*160,y:110,w:140,h:96,lift:0}));labels.push(['PROJECTS',36,206]);PROJ.forEach((p,i)=>B.push({k:'p',i,x:104+(i%5)*198,y:310+((i/5)|0)*180,w:182,h:164,lift:0}));}
+    else{labels.push(['THE BASICS',36,30]);BASICS.forEach((b,i)=>B.push({k:'b',i,x:175+(i%2)*310,y:100+((i/2)|0)*128,w:282,h:108,lift:0}));const py=100+Math.ceil(NB/2)*128;labels.push(['PROJECTS',36,py-12]);PROJ.forEach((p,i)=>B.push({k:'p',i,x:175+(i%2)*310,y:py+70+((i/2)|0)*172,w:282,h:150,lift:0}));}
+    CH=Math.max(...B.map(b=>b.y+b.h/2))+24;ropes=chainRopes(B.slice(0,NB),bDone);}
   place();const nb=BASICS.findIndex((b,i)=>!bDone(i));
-  return{enter(){ui({kicker:'A free sewing school',title:'Learn to sew your own <em>clothes</em>.',msg:'Four short basics, then pick a project: dresses, a shirt, jeans or a suit. Every pattern is drafted from <b>your</b> measurements, and everything can be sewn by hand — no machine needed.',b1:nb>=0?{label:nb===0?'Start the basics':`Continue · ${BASICS[nb].name}`,fn:()=>startStep('basics',nb)}:{label:'Open the shift dress',fn:()=>openProject('shift')},b2:{label:'What you’ll need',fn:materials}});},
-    bounds(){return mode===2?{x:20,y:5,w:630,h:880}:{x:20,y:20,w:960,h:600};},
-    update(dt){t+=dt;place();ropes.forEach(r=>r.step());B.forEach((b,i)=>b.lift=lerp(b.lift,i===hov?1:0,.2));},
-    hover(p){hov=B.findIndex(b=>Math.abs(p.x-b.x)<b.w/2&&Math.abs(p.y-b.y)<b.h/2);cv.style.cursor=hov>=0?'pointer':'default';},
-    down(p){this.hover(p);if(hov<0)return;tick();const b=B[hov];if(b.k==='b')startStep('basics',b.i);else openProject(PROJ[b.i].id);},
-    draw(){font(12,700);ctx.fillStyle='rgba(29,32,39,.42)';ctx.textAlign='left';labels.forEach(l=>ctx.fillText(l[0],l[1],l[2]));
+  function click(p){this_hover(p);if(hov<0)return;tick();const b=B[hov];if(b.k==='b')startStep('basics',b.i);else openProject(PROJ[b.i].id);}
+  function this_hover(p){hov=B.findIndex(b=>Math.abs(p.x-b.x)<b.w/2&&Math.abs(p.y-b.y)<b.h/2);cv.style.cursor=hov>=0?'pointer':'default';}
+  return{enter(){ui({kicker:'A free sewing school',title:'Learn to sew your own <em>clothes</em>.',msg:'Six short basics, then pick a project: dresses, a top, skirts, trousers, a shirt, jeans or a suit. Every pattern is drafted from <b>your</b> measurements and prints at real size — and it can all be sewn by hand.',b1:nb>=0?{label:nb===0?'Start the basics':`Continue · ${BASICS[nb].name}`,fn:()=>startStep('basics',nb)}:{label:'Open the shift dress',fn:()=>openProject('shift')},b2:{label:'Real-life guide',fn:materials}});},
+    bounds(){place();if(mode===2){vh=Math.min(CH,630*stageAR);scroll=clamp(scroll,0,Math.max(0,CH-vh));return{x:20,y:scroll,w:630,h:vh,snap:true};}return{x:20,y:20,w:960,h:CH-20};},
+    update(dt){t+=dt;place();if(!dr&&Math.abs(vel)>.2){scroll+=vel;vel*=.92;}ropes.forEach(r=>r.step());B.forEach((b,i)=>b.lift=lerp(b.lift,i===hov?1:0,.2));},
+    hover(p){this_hover(p);},
+    down(p){dr={sy:p.y*view.s+view.oy,sc:scroll,moved:false,p};vel=0;},
+    move(p){if(!dr)return;const dy=p.y*view.s+view.oy-dr.sy;if(Math.abs(dy)>8)dr.moved=true;if(mode===2&&dr.moved){const ns=dr.sc-dy/view.s;vel=ns-scroll;scroll=ns;}},
+    up(){if(!dr)return;const d=dr;dr=null;if(!d.moved)click(d.p);},
+    wheel(dy){if(mode===2){scroll+=dy/view.s;vel=0;}},
+    draw(){if(mode===2&&scroll>1){ctx.beginPath();ctx.rect(-2000,scroll-4,5000,5000);ctx.clip();}
+      font(12,700);ctx.fillStyle='rgba(29,32,39,.42)';ctx.textAlign='left';labels.forEach(l=>ctx.fillText(l[0],l[1],l[2]));
       ropes.forEach(r=>r.draw());
-      B.forEach(b=>{if(b.k==='b'){stepBlock(b,String(b.i+1).padStart(2,'0'),BASICS[b.i].name,BASICS[b.i].sub,bDone(b.i),b.i===nb,t);return;}
-        const p=PROJ[b.i],y=b.y-b.lift*3,x0=b.x-b.w/2;metal(x0,y-b.h/2,b.w,b.h,18,{sb:16+b.lift*10,so:8+b.lift*4});
-        drawIcon(p.id,b.x+b.w/2-48,y,b.h-34,70);
-        const lv=p.level;font(11,700);const tw=ctx.measureText(lv).width+14;rr(x0+16,y-b.h/2+16,tw,20,10);ctx.fillStyle=lv.startsWith('Adv')?'rgba(29,32,39,.85)':lv.startsWith('Inter')?rgba(CORAL,.9):'rgba(63,155,107,.85)';ctx.fill();ctx.fillStyle='#fff';ctx.textAlign='left';ctx.fillText(lv,x0+23,y-b.h/2+30);
-        font(19,700);ctx.fillStyle=INK;ctx.fillText(p.name,x0+18,y+12);font(12.5,500);ctx.fillStyle='rgba(29,32,39,.55)';ctx.fillText(p.sub,x0+18,y+31);
-        const pr=projProg(p.id),n=p.steps.length;rr(x0+18,y+b.h/2-24,120,5,3);ctx.fillStyle='rgba(0,0,0,.08)';ctx.fill();if(pr){rr(x0+18,y+b.h/2-24,120*pr/n,5,3);ctx.fillStyle=CORAL;ctx.fill();}font(11,600);ctx.fillStyle='rgba(29,32,39,.45)';ctx.fillText(`${pr}/${n}`,x0+146,y+b.h/2-19);
-        if(pr===n)drawCheck(x0+b.w-22,y-b.h/2+22);});
-      plugs(ropes);}};}
+      B.forEach(b=>{if(b.k==='b')stepBlock(b,String(b.i+1).padStart(2,'0'),BASICS[b.i].name,BASICS[b.i].sub,bDone(b.i),b.i===nb,t);else projTile(b,PROJ[b.i],t);});
+      plugs(ropes);
+      if(mode===2&&scroll<CH-vh-20){ctx.save();ctx.globalAlpha=.85;pillText(335,scroll+vh-22,'↓ scroll for more projects','#fff',INK,12);ctx.restore();}}};}
 function ProjectScene(id){const p=projOf(id);let t=0,hov=-1,mode=null,B=[],ropes=[];const n=p.steps.length;const dn=i=>!!state.done[id+'.'+i];
   function place(){const m=portrait?2:3;if(m===mode)return;mode=m;B=p.steps.map((s,i)=>m===3?{i,x:200+(i%3)*300,y:80+((i/3)|0)*150,w:250,h:110,lift:0}:{i,x:175+(i%2)*310,y:75+((i/2)|0)*140,w:282,h:110,lift:0});ropes=chainRopes(B,dn);}
   place();const nx=p.steps.findIndex((s,i)=>!dn(i));
-  return{enter(){const basicsLeft=BASICS.some((b,i)=>!state.done['b'+i]);ui({kicker:KICK(),title:p.title,msg:`${p.desc} <b>You’ll learn:</b> ${p.learn}`+(basicsLeft?' <br><span style="color:var(--coral)">Tip: do the four basics first — they teach the stitches used here.</span>':''),b1:{label:nx<0?'Replay from step 1':nx===0?'Start step 1':`Continue · ${p.steps[nx].name}`,fn:()=>startStep(id,Math.max(0,nx))},b2:{label:'Pattern card',fn:()=>patternCard(id)}});},
+  return{enter(){const basicsLeft=BASICS.some((b,i)=>!state.done['b'+i]);ui({kicker:KICK(),title:p.title,msg:`${p.desc} <b>You’ll learn:</b> ${p.learn}`+(basicsLeft?' <br><span style="color:var(--coral)">Tip: do the basics first — they teach the stitches used here.</span>':''),b1:{label:nx<0?'Replay from step 1':nx===0?'Start step 1':`Continue · ${p.steps[nx].name}`,fn:()=>startStep(id,Math.max(0,nx))},b2:{label:'Get the pattern',fn:()=>patternCard(id)}});},
     bounds(){const rows=Math.ceil(n/mode);return mode===2?{x:20,y:5,w:630,h:rows*140+20}:{x:40,y:10,w:920,h:Math.max(400,rows*150+10)};},
     update(dt){t+=dt;place();ropes.forEach(r=>r.step());B.forEach((b,i)=>b.lift=lerp(b.lift,i===hov?1:0,.2));},
     hover(q){hov=B.findIndex(b=>Math.abs(q.x-b.x)<b.w/2&&Math.abs(q.y-b.y)<b.h/2);cv.style.cursor=hov>=0?'pointer':'default';},
     down(q){this.hover(q);if(hov>=0){tick();startStep(id,hov);}},
     draw(){ropes.forEach(r=>r.draw());B.forEach(b=>stepBlock(b,String(b.i+1).padStart(2,'0'),p.steps[b.i].name,p.steps[b.i].sub,dn(b.i),b.i===nx,t));plugs(ropes);}};}
-function materials(){modal(`<span class="tag">Low-cost kit</span><h2>What you’ll need</h2><p>No sewing machine or expensive fabric required — every project can be sewn by hand.</p><ul><li><b>Fabric</b> — cotton or linen for dresses and shirts (old bedsheets and duvet covers are perfect), denim for jeans, wool or linen for a suit. Charity shops are full of usable fabric.</li><li><b>Thread</b> — polyester all-purpose; for jeans, a heavier “topstitch” thread in gold.</li><li><b>Hand needles</b> — “sharps” 7–9; a stronger needle and a thimble for denim.</li><li><b>Scissors</b> — sharp, used only for fabric.</li><li><b>Pins</b> — or clothes pegs / paper clips.</li><li><b>Chalk</b> — or a dry sliver of bar soap.</li><li><b>Pattern paper</b> — newspaper taped together.</li><li><b>Tape measure</b> — or string + a ruler.</li><li><b>Iron</b> — or a hot pan base, or pressing under heavy books overnight.</li></ul><div class="actions"><button class="primary" id="mok">Got it</button></div>`,m=>m.querySelector('#mok').onclick=closeModal);}
-function patternCard(id){const p=projOf(id),D=DR()[id],m=state.m;const fmt=q=>`${(+q.x).toFixed(1)} across, ${(+q.y).toFixed(1)} down`;const cap=s=>s[0].toUpperCase()+s.slice(1);
-  let h=`<span class="tag">Pattern card · ${p.level}</span><h2>${p.name}</h2><p>Bust/chest ${m.bust} · Waist ${m.waist} · Hips ${m.hip} · Length ${m.length} · Arm ${m.arm} · Outseam ${m.outseam} cm</p><p>Draw each piece on newspaper. Points are in cm — <b>across</b> from a straight reference line (the fold for “on fold” pieces, centre front for the rest) and <b>down</b> from the top. Join them in order: straight edges with a ruler, curves freehand.</p>`;
-  Object.values(D).filter(v=>v&&v.edges).forEach(pc=>{h+=`<h3>${pc.name} <small style="color:var(--muted);font-weight:500">· ${pc.cut}</small></h3><table>`;pc.edges.forEach((e,i)=>{if(i===0)h+=`<tr><td>Start</td><td>${fmt(e.a)}</td></tr>`;h+=`<tr><td>${cap(e.name)}${e.kind==='curve'?' (curve)':''} to</td><td>${fmt(e.b)}</td></tr>`;});h+='</table>';});
-  if(D.pocket)h+=`<h3>Back pocket <small style="color:var(--muted);font-weight:500">· Cut 2</small></h3><p>15 cm wide, 13.5 cm down each side, with a point 16 cm down in the middle.</p>`;
-  h+=`<p>${p.cardNote||''} 1.5 cm seam allowance is included on seams, plus 3 cm for hems.</p><h3>Order of work</h3><ol>${p.steps.filter(s=>!/^Wear/.test(s.name)).map(s=>`<li>${s.name} — ${s.sub}</li>`).join('')}</ol><div class="actions"><button id="mp">Print</button><button class="primary" id="mc">Close</button></div>`;
-  modal(h,M=>{M.querySelector('#mc').onclick=closeModal;M.querySelector('#mp').onclick=()=>window.print();});}
+function materials(){modal(`<span class="tag">Real-life guide</span><h2>What you’ll need</h2><p>No sewing machine or expensive fabric required — every project can be sewn by hand.</p><ul><li><b>Fabric</b> — cotton or linen for dresses, tops and shirts (old bedsheets and duvet covers are perfect), denim for jeans, a firmer cotton or wool for skirts and suits. Charity shops are full of usable fabric.</li><li><b>Thread</b> — polyester all-purpose; for jeans, a heavier “topstitch” thread in gold.</li><li><b>Hand needles</b> — “sharps” 7–9; a stronger needle and a thimble for denim.</li><li><b>Scissors</b> — sharp, used only for fabric. A seam ripper helps too.</li><li><b>Pins</b> — or clothes pegs / paper clips. A safety pin for threading elastic.</li><li><b>Chalk</b> — or a dry sliver of bar soap.</li><li><b>Paper</b> — print the full-size pattern at home, or draw it on newspaper from the pattern card.</li><li><b>Tape measure</b> — or string + a ruler.</li><li><b>Iron</b> — or a hot pan base, or pressing under heavy books overnight.</li><li><b>Notions</b> — zips (18–20 cm), buttons and 2.5 cm elastic, depending on the project.</li></ul>
+  <h3>Your first real garment</h3><ol><li>Practise each stitch on scraps until it feels easy.</li><li>Take your measurements (Basics → Measure) so the pattern fits you.</li><li>Print the full-size pattern from the project’s <b>Get the pattern</b> button, and check the test square.</li><li>Wash, dry and iron your fabric first — most cotton and linen shrinks.</li><li>Sew a quick test version from an old sheet (a “toile”). Try it on, mark any changes with a pen, and copy them onto the paper pattern.</li><li>Then cut your good fabric and follow the game’s steps in order. Press every seam as you go.</li></ol>
+  <p class="note">The patterns are simplified drafts made by formula from your measurements — a great starting point, but not tested like a commercial pattern. That’s what the toile is for.</p><div class="actions"><button class="primary" id="mok">Got it</button></div>`,m=>m.querySelector('#mok').onclick=closeModal);}
+function patternCard(id){const p=projOf(id),m=state.m;const fmt=q=>`${(+q.x).toFixed(1)} across, ${(+q.y).toFixed(1)} down`;const cap=s=>s[0].toUpperCase()+s.slice(1);
+  let h=`<span class="tag">Pattern · ${p.level}</span><h2>${p.name}</h2><p>Bust/chest ${m.bust} · Waist ${m.waist} · Hips ${m.hip} · Length ${m.length} · Arm ${m.arm} · Outseam ${m.outseam} cm</p>
+  <div class="actions" style="margin:6px 0 4px"><button class="primary wide" id="mfs">Print it at real size</button><button id="msvg">Download SVG</button><button id="mp">Print this card</button></div>
+  <p class="note">The real-size pattern tiles onto ordinary A4 or US Letter paper — tape the pages together and cut. Or draw it yourself on newspaper from the points below: cm <b>across</b> from a straight reference line (the fold for “on fold” pieces, centre front or back for the rest) and <b>down</b> from the top. Straight edges with a ruler, curves freehand.</p>`;
+  xpOf(id).forEach(pc=>{h+=`<h3>${pc.name} <small style="color:var(--muted);font-weight:500">· ${pc.cut}</small></h3>`;if(pc.noSA&&pc.edges.length===4&&pc.name!=='Back pocket'){h+=`<p>A rectangle ${r1(pc.bb.w)} × ${r1(pc.bb.h)} cm${pc.grain?', cut at 45° to the grain':''}.</p>`;return;}h+='<table>';pc.edges.forEach((e,i)=>{if(i===0)h+=`<tr><td>Start</td><td>${fmt(e.a)}</td></tr>`;h+=`<tr><td>${cap(e.name)}${e.kind==='curve'?' (curve)':''} to</td><td>${fmt(e.b)}</td></tr>`;});h+='</table>';});
+  if(id==='pants')h+=`<p>Elastic: 2.5 cm wide, ${DR().pants.elastic} cm long.</p>`;
+  h+=`<p>${p.cardNote||''} Seam allowance is included: 1.5 cm on seams, 1 cm on necklines and armholes, ${hemSA(id)} cm on hems.</p><h3>Order of work</h3><ol>${p.steps.filter(s=>!/^Wear/.test(s.name)).map(s=>`<li>${s.name} — ${s.sub}</li>`).join('')}</ol><p class="note">Simplified, untested drafts: sew a test version in cheap fabric first.</p><div class="actions"><button class="primary" id="mc">Close</button></div>`;
+  modal(h,M=>{M.querySelector('#mc').onclick=closeModal;M.querySelector('#mp').onclick=()=>window.print();M.querySelector('#mfs').onclick=()=>printModal(id);M.querySelector('#msvg').onclick=()=>downloadSVG(id);});}
+
+// ───────────────────────── full-size pattern export (tiled print + SVG)
+const PAPER={a4:{n:'A4',w:21,h:29.7},letter:{n:'US Letter',w:21.59,h:27.94}},PM=1;
+const hemSA=id=>id==='shirt'?1:id==='jeans'?2.5:3;
+const xpOf=id=>{const D=DR()[id];return D.xp||Object.values(D).filter(v=>v&&v.edges);};
+const f2=v=>String(Math.round(v*100)/100);
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+const SF='font-family="Inter Tight,Helvetica,Arial,sans-serif"';
+const pieceD=pc=>pc.edges.map((e,i)=>(i?'':`M${f2(e.a.x)} ${f2(e.a.y)}`)+(e.kind==='line'?`L${f2(e.b.x)} ${f2(e.b.y)}`:`Q${f2(e.c.x)} ${f2(e.c.y)} ${f2(e.b.x)} ${f2(e.b.y)}`)).join('')+'Z';
+function arrowHead(x,y,ang,s){const a=P(x-Math.cos(ang-.45)*s,y-Math.sin(ang-.45)*s),b=P(x-Math.cos(ang+.45)*s,y-Math.sin(ang+.45)*s);return`<path d="M${f2(x)} ${f2(y)}L${f2(a.x)} ${f2(a.y)}L${f2(b.x)} ${f2(b.y)}Z" fill="#111"/>`;}
+const pl=q=>q.map(v=>f2(v.x)+','+f2(v.y)).join(' ');
+function pieceSVG(pc,id){const p=projOf(id),m=state.m,bb=pc.bb,sa=hemSA(id);let s=`<path d="${pieceD(pc)}" fill="#fff" stroke="#111" stroke-width=".07" stroke-linejoin="round"/>`;
+  if(!pc.noSA)pc.edges.forEach(e=>{if(pc.noSAe&&pc.noSAe.includes(e.name))return;const a=/hem|cuff/.test(e.name)?sa:/neck|armhole|strap|lapel|notch|gorge/.test(e.name)?1:1.5;s+=`<polyline points="${pl(insetEdge(e,pc.poly,a))}" fill="none" stroke="#666" stroke-width=".035" stroke-dasharray=".45 .3"/>`;});
+  (pc.marks||[]).forEach(mk=>{s+=`<polyline points="${pl(mk)}" fill="none" stroke="#111" stroke-width=".05"/>`+mk.map(v=>`<circle cx="${f2(v.x)}" cy="${f2(v.y)}" r=".18" fill="#111"/>`).join('');});
+  let c=centroid(pc.poly);if(!inPoly(c,pc.poly))c=P((bb.x0+bb.x1)/2,(bb.y0+bb.y1)/2);
+  if(pc.onFold){const ys=pc.poly.filter(q=>Math.abs(q.x)<.01).map(q=>q.y),fy0=Math.min(...ys),fy1=Math.max(...ys),y0=fy0+(fy1-fy0)*.15,y1=fy1-(fy1-fy0)*.15;
+    s+=`<path d="M0 ${f2(y0)}H1.6V${f2(y1)}H0" fill="none" stroke="#111" stroke-width=".05"/>`+arrowHead(0,y0,Math.PI,.55)+arrowHead(0,y1,Math.PI,.55)+`<text transform="translate(2.45 ${f2((y0+y1)/2)}) rotate(-90)" text-anchor="middle" font-size=".75" font-weight="700" ${SF}>PLACE ON FOLD</text>`;}
+  const narrow=bb.w<6;let gx=pc.onFold?Math.max(4,c.x-bb.w*.2):narrow?bb.x1-1.1:c.x-Math.min(bb.w*.25,6);if((pc.marks||[]).some(mk=>mk.some(v=>Math.abs(v.x-gx)<2.5)))gx=Math.min(...(pc.marks||[]).flat().map(v=>v.x))-3;if(pc.onFold)gx=Math.max(gx,4);
+  if(pc.grain){const L=Math.min(bb.w,bb.h)*.75,d=P(Math.SQRT1_2*L/2,Math.SQRT1_2*L/2),a=P(c.x-d.x,c.y-d.y),b=P(c.x+d.x,c.y+d.y);s+=`<line x1="${f2(a.x)}" y1="${f2(a.y)}" x2="${f2(b.x)}" y2="${f2(b.y)}" stroke="#111" stroke-width=".06"/>`+arrowHead(a.x,a.y,Math.PI*1.25,.5)+arrowHead(b.x,b.y,Math.PI*.25,.5);}
+  else{const gl=Math.min(bb.h*.55,45),ya=c.y-gl/2,yb=c.y+gl/2;s+=`<line x1="${f2(gx)}" y1="${f2(ya)}" x2="${f2(gx)}" y2="${f2(yb)}" stroke="#111" stroke-width=".06"/>`+arrowHead(gx,ya,-Math.PI/2,.6)+arrowHead(gx,yb,Math.PI/2,.6)+`<text transform="translate(${f2(gx-.25)} ${f2(yb-1)}) rotate(-90)" font-size=".55" ${SF}>GRAIN</text>`;}
+  const tall=bb.h>bb.w*3,meta=`${p.name} · bust ${m.bust} · waist ${m.waist} · hips ${m.hip} cm`,room=tall?bb.h*.55:Math.max(4,bb.x1-gx-1.2);let fs=clamp(Math.min(bb.w,bb.h)*.085,.6,1.9);fs=Math.min(fs,room/(pc.name.length*.66),room/(meta.length*.36*.55));if(tall)fs=Math.min(fs,(bb.w-.6)/2.9);
+  const lines=[[pc.name.toUpperCase(),fs,700],[pc.cut,fs*.5,600],[meta,fs*.36,400],['Haute · bebop-cow.github.io/haute',fs*.32,400]];let g='',yy=0;lines.forEach(([tx,sz,w])=>{g+=`<text x="0" y="${f2(yy)}" font-size="${f2(sz)}" font-weight="${w}" fill="#111" ${SF}>${esc(tx)}</text>`;yy+=sz*1.3;});
+  s+=tall?`<g transform="translate(${f2((pc.grain||narrow?bb.x0+.3:gx+.5)+fs*.8)} ${f2(c.y+bb.h*.27)}) rotate(-90)">${g}</g>`:`<g transform="translate(${f2(gx+.6)} ${f2(c.y-fs*.4)})">${g}</g>`;
+  return s;}
+function sheetLayout(id,tw,th){const HEAD=10,M=1,G=1.6;const items=xpOf(id).map(pc=>({pc,w:pc.bb.w,h:pc.bb.h})).sort((a,b)=>b.h-a.h);const maxW=Math.max(20,...items.map(i=>i.w))+2*M;
+  const pack=SW=>{let x=M,y=HEAD,sh=0;const out=[];items.forEach(it=>{if(x+it.w>SW-M+1e-6&&x>M){x=M;y+=sh+G;sh=0;}out.push({...it,x,y});x+=it.w+G;sh=Math.max(sh,it.h);});return{pls:out,H:y+sh+M};};
+  const c0=Math.max(1,Math.ceil(maxW/tw));let best=null;
+  for(let c=c0;c<=c0+4;c++){const SW=c*tw,{pls,H:CHh}=pack(SW),rows=Math.ceil(CHh/th);const samp=pls.map(o=>{const dx=o.x-o.pc.bb.x0,dy=o.y-o.pc.bb.y0;const pts=[];o.pc.edges.forEach(e=>{const q=edgePts(e,24);for(let i=0;i<q.length;i++){const a=q[i],b=q[Math.min(i+1,q.length-1)];for(let u=0;u<1;u+=.25)pts.push(P(lerp(a.x,b.x,u)+dx,lerp(a.y,b.y,u)+dy));}});return{pts,poly:o.pc.poly.map(v=>P(v.x+dx,v.y+dy))};});
+    const tiles=[];for(let r=0;r<rows;r++)for(let q=0;q<c;q++){const x0=q*tw,y0=r*th,x1=x0+tw,y1=y0+th,inT=v=>v.x>=x0&&v.x<=x1&&v.y>=y0&&v.y<=y1;const used=(r===0&&q===0)||samp.some(o=>o.pts.some(inT)||[P(x0,y0),P(x1,y0),P(x1,y1),P(x0,y1),P((x0+x1)/2,(y0+y1)/2)].some(v=>inPoly(v,o.poly)));if(used)tiles.push({r,c:q,lab:String.fromCharCode(65+q)+(r+1)});}
+    if(!best||tiles.length<best.tiles.length)best={SW,H:CHh,SH:rows*th,cols:c,rows,pls,tiles,tw,th};}
+  return best;}
+function sheetInner(id,L){const p=projOf(id),m=state.m;let s=`<g ${SF} fill="#111"><text x="1" y="2.3" font-size="1.3" font-weight="700">Haute · ${esc(p.name)}</text><text x="1" y="3.3" font-size=".55">Bust ${m.bust} · waist ${m.waist} · hips ${m.hip} · length ${m.length} · arm ${m.arm} · outseam ${m.outseam} cm</text><text x="1" y="4.1" font-size=".45" fill="#d9665a" font-weight="600">Simplified draft: sew a test version first. Print at 100%.</text>
+    <rect x="1" y="4.8" width="5" height="5" fill="none" stroke="#111" stroke-width=".05"/><text x="3.5" y="7.5" font-size=".7" text-anchor="middle" font-weight="700">5 cm</text><text x="3.5" y="8.3" font-size=".4" text-anchor="middle">test square</text>
+    <rect x="7" y="4.8" width="2.54" height="2.54" fill="none" stroke="#111" stroke-width=".05"/><text x="8.27" y="6.25" font-size=".55" text-anchor="middle" font-weight="700">1 in</text>
+    <line x1="10.5" y1="5.3" x2="12.8" y2="5.3" stroke="#111" stroke-width=".07"/><text x="13.3" y="5.5" font-size=".5">cut line</text><line x1="10.5" y1="6.4" x2="12.8" y2="6.4" stroke="#666" stroke-width=".035" stroke-dasharray=".45 .3"/><text x="13.3" y="6.6" font-size=".5">stitch line</text>
+    <line x1="10.5" y1="7.5" x2="12.8" y2="7.5" stroke="#111" stroke-width=".06"/>${arrowHead(12.8,7.5,0,.4)}${arrowHead(10.5,7.5,Math.PI,.4)}<text x="13.3" y="7.7" font-size=".5">grain line</text>
+    <polyline points="11,8.3 11.65,9.2 12.3,8.3" fill="none" stroke="#111" stroke-width=".05"/><text x="13.3" y="9" font-size=".5">dart</text></g>`;
+  L.pls.forEach(o=>{s+=`<g transform="translate(${f2(o.x-o.pc.bb.x0)} ${f2(o.y-o.pc.bb.y0)})">${pieceSVG(o.pc,id)}</g>`;});return s;}
+function gridOverlay(L){let s='<g fill="none" stroke="#9a9a9a" stroke-width=".025">';const{tw,th,cols,rows}=L;for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){const x=c*tw,y=r*th;s+=`<rect x="${f2(x)}" y="${f2(y)}" width="${f2(tw)}" height="${f2(th)}"/>`;[[x+tw/2,y],[x+tw/2,y+th],[x,y+th/2],[x+tw,y+th/2]].forEach(([a,b])=>s+=`<circle cx="${f2(a)}" cy="${f2(b)}" r=".55"/>`);}
+  s+='</g>';L.tiles.forEach(t=>{s+=`<text x="${f2(t.c*tw+.5)}" y="${f2(t.r*th+th-.5)}" font-size=".9" font-weight="700" fill="#c4c4c4" ${SF}>${t.lab}</text>`;});return s;}
+function mapSVG(id,L){let s=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="-.5 -.5 ${f2(L.cols*L.tw+1)} ${f2(L.SH+1)}" style="width:100%;max-height:100mm;display:block">`;const used=new Set(L.tiles.map(t=>t.lab));
+  for(let r=0;r<L.rows;r++)for(let c=0;c<L.cols;c++){const lab=String.fromCharCode(65+c)+(r+1),u=used.has(lab);s+=`<rect x="${f2(c*L.tw)}" y="${f2(r*L.th)}" width="${f2(L.tw)}" height="${f2(L.th)}" fill="${u?'#fff':'#eee'}" stroke="#aaa" stroke-width=".15"/>`;}
+  L.pls.forEach(o=>s+=`<path transform="translate(${f2(o.x-o.pc.bb.x0)} ${f2(o.y-o.pc.bb.y0)})" d="${pieceD(o.pc)}" fill="rgba(217,102,90,.18)" stroke="#333" stroke-width=".2"/>`);
+  for(let r=0;r<L.rows;r++)for(let c=0;c<L.cols;c++){const lab=String.fromCharCode(65+c)+(r+1),u=used.has(lab);s+=`<text x="${f2(c*L.tw+L.tw/2)}" y="${f2(r*L.th+L.th/2)}" font-size="${f2(Math.min(L.tw,L.th)*.22)}" text-anchor="middle" dominant-baseline="middle" font-weight="700" fill="${u?'#d9665a':'#bbb'}" ${SF}>${u?lab:'—'}</text>`;}
+  return s+'</svg>';}
+function printPattern(id,pk){const pp=PAPER[pk],tw=pp.w-2*PM,th=pp.h-2*PM,L=sheetLayout(id,tw,th),inner=sheetInner(id,L)+gridOverlay(L),p=projOf(id),m=state.m,N=L.tiles.length+1;
+  const page=body=>`<div class="ppage" style="width:${pp.w}cm;height:${pp.h}cm">${body}</div>`;
+  let h=page(`<div style="position:absolute;left:1.5cm;right:1.5cm;top:1.3cm;font-family:'Inter Tight',Arial,sans-serif;color:#1d2027;font-size:10pt;line-height:1.4"><div style="font-weight:700;font-size:8pt;letter-spacing:.06em;color:#d9665a">HAUTE · FULL-SIZE PATTERN</div><div style="font-size:22pt;font-weight:700;margin:2px 0">${esc(p.name)}</div><div>Drafted for bust ${m.bust} · waist ${m.waist} · hips ${m.hip} · length ${m.length} · arm ${m.arm} · outseam ${m.outseam} cm · ${pp.n}, ${N} pages</div>
+    <div style="display:flex;gap:.8cm;align-items:flex-start;margin:.4cm 0"><div style="width:5cm;height:5cm;border:1px solid #000;box-sizing:border-box;display:grid;place-items:center;font-weight:700;flex:none">5 cm</div><ol style="margin:0;padding-left:1.1em"><li>Print at <b>100% / “Actual size”</b>, not “Fit to page”. Check this square measures exactly 5 cm (2 in) before printing the rest.</li><li>Cut off the white margin of every page along the grey line. Lay the pages out as in the map below, matching the half-circles, and tape them together.</li><li>Cut along the <b>solid</b> line. The <b>dashed</b> line is where you stitch (seam allowance is included).</li><li>Lay the grain arrows parallel to the selvedge, and “place on fold” edges on the fold.</li><li>Sew a quick test version in an old sheet first — these are simplified drafts.</li></ol></div>
+    <div style="font-weight:700;margin-bottom:4px">Page map <span style="font-weight:400;color:#888">(blank pages are skipped)</span></div>${mapSVG(id,L)}
+    <div style="margin-top:.35cm"><b>Pieces:</b> ${xpOf(id).map(pc=>`${esc(pc.name)} — ${esc(pc.cut)}`).join(' · ')}${id==='pants'?` · Elastic — 2.5 cm wide, ${DR().pants.elastic} cm`:''}</div><div style="margin-top:.2cm;color:#555">${esc(p.cardNote||'')}</div></div><div class="pfoot">${esc(p.name)} · page 1 of ${N} · bebop-cow.github.io/haute</div>`);
+  L.tiles.forEach((t,i)=>{h+=page(`<svg xmlns="http://www.w3.org/2000/svg" style="position:absolute;left:${PM}cm;top:${PM}cm;width:${f2(tw)}cm;height:${f2(th)}cm" viewBox="${f2(t.c*tw)} ${f2(t.r*th)} ${f2(tw)} ${f2(th)}">${inner}</svg><div class="pfoot">${esc(p.name)} · page <b>${t.lab}</b> · ${i+2} of ${N} · trim along the grey line, then tape to the neighbouring pages</div>`);});
+  $('pp').innerHTML=h;$('ppstyle').textContent=`@page{size:${pp.w}cm ${pp.h}cm;margin:0}`;document.body.classList.add('pp');setTimeout(()=>window.print(),120);}
+addEventListener('afterprint',()=>{if(!document.body.classList.contains('pp'))return;document.body.classList.remove('pp');$('pp').innerHTML='';$('ppstyle').textContent='';});
+function fullSVG(id){const L=sheetLayout(id,90,1e4);return`<svg xmlns="http://www.w3.org/2000/svg" width="${f2(L.SW)}cm" height="${f2(L.H)}cm" viewBox="0 0 ${f2(L.SW)} ${f2(L.H)}"><rect width="${f2(L.SW)}" height="${f2(L.H)}" fill="#fff"/>${sheetInner(id,L)}</svg>`;}
+function downloadSVG(id){const blob=new Blob([fullSVG(id)],{type:'image/svg+xml'}),u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=`haute-${id}-pattern.svg`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);}
+function printModal(id){const p=projOf(id);let pk=state.paper||(/^en-(US|CA)|^es-(MX|US)/.test(navigator.language||'')?'letter':'a4');
+  modal(`<span class="tag">Real-size pattern</span><h2>Print your ${esc(p.name.toLowerCase())}</h2><p>Drafted from your measurements and tiled onto ordinary paper. Use the print dialog’s <b>Save as PDF</b> to keep a copy.</p><div class="seg" id="ps"><button data-p="a4">A4</button><button data-p="letter">US Letter</button></div><p id="pcount" style="margin-top:10px"></p>
+    <ol><li>In the print dialog, set the scale to <b>100%</b> / “Actual size” — not “Fit to page”.</li><li>Check the 5 cm test square on page 1 before printing the rest.</li><li>Trim each page along the grey line and tape them together, matching the half-circles and the map on page 1.</li><li>Cut on the <b>solid</b> line; the <b>dashed</b> line is the stitching line.</li><li>Sew a test version in an old sheet before cutting good fabric.</li></ol>
+    <p class="note">Copy shops and print services can print the SVG file in one piece on large-format (A0 / 36″) paper.</p><div class="actions"><button id="pb">Back</button><button id="psvg">Download SVG</button><button class="primary" id="pgo">Print pages</button></div>`,M=>{
+    const paint=()=>{M.querySelectorAll('#ps button').forEach(b=>b.classList.toggle('on',b.dataset.p===pk));const pp=PAPER[pk],L=sheetLayout(id,pp.w-2*PM,pp.h-2*PM);M.querySelector('#pcount').innerHTML=`<b>${L.tiles.length+1} pages</b> of ${pp.n} (1 instruction page + ${L.tiles.length} pattern pages).`;};
+    M.querySelectorAll('#ps button').forEach(b=>b.onclick=()=>{pk=b.dataset.p;state.paper=pk;save();tick();paint();});paint();
+    M.querySelector('#pb').onclick=()=>patternCard(id);M.querySelector('#psvg').onclick=()=>downloadSVG(id);M.querySelector('#pgo').onclick=()=>printPattern(id,pk);});}
 
 // ═════════════════════════ PROJECT STEPS ═════════════════════════
 // ───────── pattern & grain
@@ -532,7 +681,7 @@ function LayoutScene(id,key){const pc=DR()[id][key],F=fabricLayout(pc),k=F.k,pol
   const pins=[];for(let i=0;i<poly.length;i+=Math.max(1,Math.floor(poly.length/6)))pins.push(P(lerp(poly[i].x,c.x,.15),lerp(poly[i].y,c.y,.15)));
   const foldTxt=pc.onFold?'push the <b>place-on-fold</b> edge right against the fold':'keep it a few cm in from the fold — this piece is <b>“Cut 2”</b>, so the doubled fabric gives you a mirror-image pair';
   function uiPlace(){ui({kicker:KICK(),title:'Line up the <em>grain</em>.',msg:`Drag the paper pattern onto the fabric. Turn it with the knob until the <b>grain arrow</b> runs straight up and down, then ${foldTxt}.`,b2:{label:'Restart',fn:replay}});}
-  return{enter(){ui({kicker:KICK(),title:'Choose your <em>fabric</em>.',msg:projOf(id).fab==='denim'?'Denim is a tough twill weave. Wash it twice before cutting — it shrinks a lot.':projOf(id).fab==='suit'?'Wool, linen or a firm cotton all tailor well. Steam-press it first so it won’t shrink under the iron later.':'Woven cotton or linen is easiest — it doesn’t slip or stretch. Old bedsheets work well. Wash and iron it first so it won’t shrink later.',extra:swatches(id),b1:{label:'Use this fabric',fn:()=>{phase='place';uiPlace();}}});},
+  return{enter(){ui({kicker:KICK(),title:'Choose your <em>fabric</em>.',msg:projOf(id).fab==='denim'?'Denim is a tough twill weave. Wash it twice before cutting — it shrinks a lot.':projOf(id).fab==='bottoms'?'Linen, cotton twill or viscose all drape nicely for wide legs. Wash and iron it first.':projOf(id).fab==='skirt'?'A medium-weight fabric with some body — cotton twill, wool or denim. Avoid stretchy fabric for your first skirt.':projOf(id).fab==='suit'?'Wool, linen or a firm cotton all tailor well. Steam-press it first so it won’t shrink under the iron later.':'Woven cotton or linen is easiest — it doesn’t slip or stretch. Old bedsheets work well. Wash and iron it first so it won’t shrink later.',extra:swatches(id),b1:{label:'Use this fabric',fn:()=>{phase='place';uiPlace();}}});},
     bounds(){return phase==='pick'?{x:F.fx-40,y:F.fy-30,w:F.fw+80,h:F.fh+60}:{x:F.fx-40,y:0,w:Math.max(F.fw+80,startX+pw*.65-F.fx+40),h:H};},
     update(dt){t+=dt;if(phase==='place'&&!drag){if(Math.abs(ang)<.07&&Math.abs(pos.x-target.x)<GR(14)&&Math.abs(pos.y-target.y)<130){ang=lerp(ang,0,.25);pos=P(lerp(pos.x,target.x,.25),lerp(pos.y,target.y,.25));if(Math.abs(ang)<.002&&dist(pos,target)<.6){ang=0;pos=P(target.x,target.y);phase='pinned';pinsT=0;pop();setTimeout(()=>DONE('The grain arrow follows the lengthwise threads — the strongest direction — so the garment hangs straight instead of twisting. Next: trace around it with chalk (or a sliver of soap) and cut.','Pinned on the <em>straight grain</em>.'),900);}}}if(pinsT>=0)pinsT+=dt;},
     get dbg(){return{knob:knob(),pos,target,ang};},
@@ -585,17 +734,17 @@ function CutScene(id,key){const pc=DR()[id][key],F=fabricLayout(pc),k=F.k,E=pc.e
       else{if(rev>=0){const b=bbox(pp),e=easeIO(rev),dx=e*(b.w+30),cx=(b.x0+b.x1)/2;ctx.save();ctx.translate(dx,0);ctx.translate(cx,0);ctx.scale(1-2*e,1);ctx.translate(-cx,0);cloth(pp,e<.5?shade(hex,-.08):hex,{thick:2});ctx.restore();}cloth(pp,hex,{thick:2});}}};}
 
 // ───────── seams (stack, sew, repeat, press)
-function SeamsScene(id){const D=DR()[id],pc=D.front;const polys=fullPolys(id,'front');const bb=bbox(polys.flat());const kk=Math.min(5.4,520/bb.h,330/bb.w);const top=(H-bb.h*kk)/2-bb.y0*kk;
+function SeamsScene(id){const D=DR()[id],pc=D.front,PJ=projOf(id),SX=PJ.seam||{a:'shoulder seam',edge:'SHOULDER EDGE ↑',rest:'Repeat along the second shoulder and both side seams.',btn:'Sew the shoulder →'};const T=PJ.splay?(p=>p.y>pc.rise?P(p.x+(p.y-pc.rise)*PJ.splay,p.y):p):(p=>p);const polys=pc.onFold?fullPolys(id,'front'):(()=>{const h=cutPoly(id,'front').map(T);return[h.map(mxP),h];})();const bb=bbox(polys.flat());const kk=Math.min(5.4,520/bb.h,330/bb.w);const top=(H-bb.h*kk)/2-bb.y0*kk;
   const toS=(p,cx)=>P(cx+p.x*kk,top+p.y*kk);let phase='stack',t=0,flipT=-1,cT=0,st=null,ffT=-1,iron=null;
-  const seamsCm=[];pc.seams.forEach(nm=>{const e=pc.edges.find(e=>e.name===nm);const s=insetEdge(e,pc.poly);seamsCm.push(s,s.map(mxP));});
+  const seamsCm=[];pc.seams.forEach(nm=>{const e=pc.edges.find(e=>e.name===nm);const s=insetEdge(e,pc.poly).map(T);seamsCm.push(s,s.map(mxP));});
   const seams=cx=>seamsCm.map(s=>s.map(p=>toS(p,cx)));const hw=Math.max(-bb.x0,bb.x1)*kk;
   const hex=()=>fabOf(id),wrong=()=>shade(fabOf(id),lum(fabOf(id))>.6?-.08:.35);
   const A=P(240,300),Bp=P(760,300);
-  function startShoulder(){phase='shoulder';st=Stitcher({a:A,b:Bp,pxcm:70,rule:'back',guided:false,L:.7,tolOff:.3,onError:m=>setMsg(m),onDone:s=>{float(500,240,'★'.repeat(s.stars)+'☆'.repeat(3-s.stars),CORAL);setTimeout(()=>{phase='ff';ffT=0;ui({kicker:KICK(),title:'Same for the <em>other seams</em>.',msg:'Repeat along the second shoulder and both side seams — 1.5 cm in from the edge. Finish each seam with two tiny stitches on the spot.',b2:{label:'Restart',fn:replay}});},800);}});
-    ui({kicker:KICK(),title:'Backstitch the <em>shoulder seam</em>.',msg:'Sew along the chalk line, <b>1.5 cm</b> in from the edge — that’s the seam allowance. Up one stitch ahead (~7 mm), back down into the last one.',b2:{label:'Restart',fn:replay}});}
+  function startShoulder(){phase='shoulder';st=Stitcher({a:A,b:Bp,pxcm:70,rule:'back',guided:false,L:.7,tolOff:.3,onError:m=>setMsg(m),onDone:s=>{float(500,240,'★'.repeat(s.stars)+'☆'.repeat(3-s.stars),CORAL);setTimeout(()=>{phase='ff';ffT=0;ui({kicker:KICK(),title:'Same for the <em>other seams</em>.',msg:SX.rest+' Stitch 1.5 cm in from the edge, and finish each seam with two tiny stitches on the spot.',b2:{label:'Restart',fn:replay}});},800);}});
+    ui({kicker:KICK(),title:`Backstitch the <em>${SX.a}</em>.`,msg:'Sew along the chalk line, <b>1.5 cm</b> in from the edge — that’s the seam allowance. Up one stitch ahead (~7 mm), back down into the last one.',b2:{label:'Restart',fn:replay}});}
   return{enter(){ui({kicker:KICK(),title:'Pin <em>right sides together</em>.',msg:'The right side is the “good” side of the fabric. Face to face, the seams end up hidden <b>inside</b>.',b1:{label:'Flip the front onto the back',fn:()=>{flipT=0;b1On(false);}},b2:{label:'Restart',fn:replay}});},
     bounds(){const b={y:top+bb.y0*kk-20,h:bb.h*kk+50};if(phase==='shoulder')return{x:160,y:150,w:680,h:360};if(phase==='stack'&&cT<=0)return{...b,x:280-hw-20,w:440+hw*2+40};if(phase==='stack')return{...b,x:500-hw-140,w:hw*2+280};return{...b,x:500-hw-30,w:Math.max(hw*2+60,hw+450)};},
-    update(dt){t+=dt;if(flipT>=0&&flipT<1){flipT=Math.min(1,flipT+dt*.8);if(flipT>=1){pop();setTimeout(()=>{cT=.0001;},200);}}if(cT>0&&cT<1){cT=Math.min(1,cT+dt*1.2);if(cT>=1)ui({kicker:KICK(),title:'Pinned and ready.',msg:'Pins go across the seam line, so you can sew right up to each one and pull it out as you reach it.',b1:{label:'Sew the shoulder →',fn:startShoulder},b2:{label:'Restart',fn:replay}});}
+    update(dt){t+=dt;if(flipT>=0&&flipT<1){flipT=Math.min(1,flipT+dt*.8);if(flipT>=1){pop();setTimeout(()=>{cT=.0001;},200);}}if(cT>0&&cT<1){cT=Math.min(1,cT+dt*1.2);if(cT>=1)ui({kicker:KICK(),title:'Pinned and ready.',msg:'Pins go across the seam line, so you can sew right up to each one and pull it out as you reach it.',b1:{label:SX.btn,fn:startShoulder},b2:{label:'Restart',fn:replay}});}
       if(st&&phase==='shoulder')st.update(dt);
       if(phase==='ff'){const pv=ffT;ffT+=dt*.45;if(Math.floor(ffT*30)!==Math.floor(pv*30)&&ffT<1)tick();if(ffT>=1.15){phase='press';iron=Iron(seams(500).flatMap(s=>resample(s,16)),()=>{phase='done';DONE('Every seam sewn and pressed. Pressing as you go is the secret of neat home sewing.','<em>Press</em> the seams.');},P(500+hw+90,top+bb.y1*kk-40));ui({kicker:KICK(),title:'<em>Press</em> the seams.',msg:'Drag the iron along every seam. No iron? A hot pan base or a night under heavy books works too.',b2:{label:'Restart',fn:replay}});}}
       if(iron)iron.update(dt);},
@@ -603,7 +752,7 @@ function SeamsScene(id){const D=DR()[id],pc=D.front;const polys=fullPolys(id,'fr
     hover(p){if(phase==='shoulder')st.move(p);if(iron)iron.hover(p);},
     draw(){if(phase==='shoulder'){const sw=swatch(170,190,660,300);ctx.save();ctx.translate(0,-6);cloth(sw,shade(hex(),-.05),{thick:2});ctx.restore();cloth(sw,wrong(),{thick:2,shadow:false});chalk([A,Bp],2,chalkCol(wrong()));
         ctx.save();ctx.strokeStyle='rgba(29,32,39,.55)';ctx.fillStyle='rgba(29,32,39,.55)';ctx.lineWidth=1.2;const x=205;ctx.beginPath();ctx.moveTo(x,192);ctx.lineTo(x,A.y);ctx.stroke();[192,A.y].forEach((y,i)=>{ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x-4,y+(i?-6:6));ctx.lineTo(x+4,y+(i?-6:6));ctx.closePath();ctx.fill();});font(11,700);ctx.save();ctx.translate(x-8,(192+A.y)/2);ctx.rotate(-Math.PI/2);ctx.textAlign='center';ctx.fillText('1.5 cm',0,0);ctx.restore();ctx.restore();
-        font(11,600);ctx.fillStyle=lum(wrong())>.6?'rgba(0,0,0,.35)':'rgba(255,255,255,.6)';ctx.textAlign='center';ctx.fillText('SHOULDER EDGE ↑',500,212);st.draw(t);return;}
+        font(11,600);ctx.fillStyle=lum(wrong())>.6?'rgba(0,0,0,.35)':'rgba(255,255,255,.6)';ctx.textAlign='center';ctx.fillText(SX.edge,500,212);st.draw(t);return;}
       const fl=flipT<0?0:easeIO(flipT),cxF=lerp(280,720,fl),sx=Math.cos(fl*Math.PI),cc=easeIO(cT);const cxB=lerp(720,500,cc),cxF2=flipT>=1?cxB:cxF;
       const drawP=(cx,col,scx=1,dy=0)=>{ctx.save();ctx.translate(cx,dy);ctx.scale(scx,1);ctx.translate(-cx,0);polys.forEach(pl=>cloth(pl.map(p=>toS(p,cx)),col,{thick:2}));ctx.restore();};
       drawP(cxB,hex());if(flipT<0){font(12,700);ctx.fillStyle='rgba(29,32,39,.4)';ctx.textAlign='center';ctx.fillText('BACK',cxB,top+bb.y1*kk+22);ctx.fillText('FRONT',280,top+bb.y1*kk+22);}
@@ -614,6 +763,7 @@ function SeamsScene(id){const D=DR()[id],pc=D.front;const polys=fullPolys(id,'fr
 
 // ───────── hems
 function HemScene(id){const pr=projOf(id).fab;const cfg=pr==='shirt'?{f:[.5,.5],col:THREAD,note:'Shirt hems are narrow: 5 mm, then 5 mm again.'}:pr==='denim'?{f:[1,1.5],col:GOLD,note:'Denim is thick — hammer the folds flat at the side seams before stitching.'}:{f:[1,2],col:THREAD,note:'This first small fold hides the raw edge so it can’t fray.'};
+  if(projOf(id).hemNote)cfg.note=projOf(id).hemNote;
   const X0=150,X1=850,Y0=130,YB=500,kk=60;let phase='f1',f=0,drag=false,t=0,st=null,sy=0;const [v1,v2]=cfg.f;const tgt={f1:[v1,.25],f2:[v2,.3]};
   const hex=()=>fabOf(id),wrong=()=>shade(fabOf(id),lum(fabOf(id))>.6?-.08:.35);
   function uiF(){ui({kicker:KICK(),title:phase==='f1'?`Fold the hem up <em>${v1} cm</em>.`:`Fold it again, <em>${v2} cm</em>.`,msg:phase==='f1'?`With the wrong side facing you, drag the bottom edge up. ${cfg.note}`:'Fold up again. This double fold encloses the raw edge completely — a clean, durable hem. Press each fold.',b2:{label:'Restart',fn:replay}});}
@@ -658,8 +808,8 @@ function GatherScene(id){const D=DR()[id];const W0=2*D.sw,Wt=2*D.qW;const k=Math
         pillText(cx,ty+90,`${Wc.toFixed(0)} cm  →  ${Wt.toFixed(0)} cm`,'#fff',Math.abs(Wc-Wt)<=Math.max(2.5,Wt*.04)?'#2f7d55':INK,13);if(phase==='pull'&&!drag&&Wc===W0){ctx.save();ctx.globalAlpha=.7;font(12,600);ctx.fillStyle=CORAL;ctx.textAlign='center';ctx.fillText('↔ drag an end inwards',cx,ty+120);ctx.restore();}}}};}
 
 // ───────── darts
-function DartScene(id){const k=30,cx=500,by=560,ay=by-10*k,hw=1.5*k;const sw=swatch(200,220,600,380);let f=0,drag=false,sx=0,phase='fold',st=null,t=0;const hex=()=>fabOf(id),wrong=()=>shade(fabOf(id),.3);
-  return{enter(){ui({kicker:KICK(),title:'Fold the <em>dart</em>.',msg:'A dart is a stitched fold that takes away a wedge of fabric so the garment curves around the body. Drag the right chalk line across onto the left one.',b2:{label:'Restart',fn:replay}});},
+function DartScene(id){const inv=SKIRTS.includes(id),sg=inv?-1:1,k=30,cx=500,by=inv?250:560,ay=by-sg*10*k,hw=1.5*k;const sw=swatch(200,220,600,380);let f=0,drag=false,sx=0,phase='fold',st=null,t=0;const hex=()=>fabOf(id),wrong=()=>shade(fabOf(id),.3);
+  return{enter(){ui({kicker:KICK(),title:'Fold the <em>dart</em>.',msg:(inv?'Skirt darts start wide at the waist and point down towards the fullest part of the hip. ':'')+'A dart is a stitched fold that takes away a wedge of fabric so the garment curves around the body. Drag the right chalk line across onto the left one.',b2:{label:'Restart',fn:replay}});},
     bounds(){return{x:180,y:200,w:640,h:420};},
     update(dt){t+=dt;if(!drag&&phase==='fold')f=lerp(f,0,.15);if(st)st.update(dt);},
     down(p){if(phase==='stitch'){st.down(p);return;}if(phase==='fold'&&p.x>cx-10){drag=true;sx=p.x;}},
@@ -668,8 +818,8 @@ function DartScene(id){const k=30,cx=500,by=560,ay=by-10*k,hw=1.5*k;const sw=swa
     up(){if(!drag)return;drag=false;if(f>.86){f=1;phase='stitch';pop();st=Stitcher({a:P(cx-hw,by),b:P(cx,ay),pxcm:k,rule:'back',guided:false,L:1,tolOff:.3,onError:m=>setMsg(m),onDone:()=>setTimeout(()=>DONE('Tie off at the point — don’t backstitch there or it puckers. Press the dart towards the centre. One dart each side, front and back.','Sew the <em>dart</em>.'),400)});ui({kicker:KICK(),title:'Stitch the <em>dart</em>.',msg:'Backstitch from the wide end to the point, right on the fold line. Taper off so the last stitches run along the very edge of the fold.',b2:{label:'Restart',fn:replay}});}else bad();},
     draw(){cloth(sw,wrong(),{thick:2});const rx=cx+hw-2*hw*f;
       if(f>0){ctx.save();path([P(cx-hw,by),P(cx,ay),P(rx,by)]);shadow(6,2,.25);ctx.fillStyle=weave(shade(hex(),.04));ctx.fill();noShadow();ctx.restore();}
-      const cc=chalkCol(wrong());chalk([P(cx-hw,by),P(cx,ay)],2,cc);chalk([P(rx,by),P(cx,ay)],2,cc);chalk([P(cx,ay-30),P(cx,ay+8)],1.4,cc);
-      if(phase==='fold'){if(f<.05&&!drag){ctx.save();ctx.globalAlpha=.6+.3*Math.sin(t*3);font(12,600);ctx.fillStyle=CORAL;ctx.textAlign='center';ctx.fillText('← drag this line over',cx+hw+70,by-40);ctx.restore();}pillText(cx,by+26,`${(3*(1-f)).toFixed(1)} cm wedge`,'#fff',INK,12);}
+      const cc=chalkCol(wrong());chalk([P(cx-hw,by),P(cx,ay)],2,cc);chalk([P(rx,by),P(cx,ay)],2,cc);chalk([P(cx,ay-30*sg),P(cx,ay+8*sg)],1.4,cc);
+      if(phase==='fold'){if(f<.05&&!drag){ctx.save();ctx.globalAlpha=.6+.3*Math.sin(t*3);font(12,600);ctx.fillStyle=CORAL;ctx.textAlign='center';ctx.fillText('← drag this line over',cx+hw+70,by-40*sg);ctx.restore();}pillText(cx,by+26*sg,`${(3*(1-f)).toFixed(1)} cm wedge`,'#fff',INK,12);}
       if(st)st.draw(t);}};}
 
 // ───────── align-and-attach (sleeves, pockets, interfacing)
@@ -728,13 +878,13 @@ function CreaseScene(id){const D=DR().suit,tr=D.trouser;const k=Math.min(5.4,560
 
 // ───────── buttonholes
 function ButtonholeScene(id){const isShirt=id==='shirt';const D=DR()[id];const hex=()=>fabOf(id);let phase=isShirt?'mark':'intro',t=0,marks=[],slicer=null,cutter=null,cutDone=false,gap=0;
-  const top=8,bot=isShirt?D.sl:D.jl;const k=540/(bot-top),Y=cm=>50+(cm-top)*k,X=500;
+  const jacket=id==='suit',top=8,bot=isShirt?D.sl:(D.jl||40);const k=540/(bot-top),Y=cm=>50+(cm-top)*k,X=500;
   const fixed=isShirt?[10,D.sl-16]:[];const n=6;const tg=isShirt?Array.from({length:n-2},(_,i)=>fixed[0]+(i+1)*(fixed[1]-fixed[0])/(n-1)):[];
   const box={x:446,y:312,w:108,h:16};
   function toSlice(){phase='slice';slicer=SliceTool(v=>b1On(v));ui({kicker:KICK(),title:'Cut it <em>open</em>.',msg:'Stitch first, cut second: the buttonhole is outlined with tight satin stitches (button width + 3 mm). Now cut open <b>between</b> the rows — don’t snip the stitches!',b1:{label:'Cut',disabled:true,fn:doCut},b2:{label:'Restart',fn:replay}});}
   function doCut(){const L=slicer.line;if(!L||cutter)return;const inside=q=>q.x>box.x+4&&q.x<box.x+box.w-4&&Math.abs(q.y-(box.y+box.h/2))<box.h/2-2;if(!inside(L.a)||!inside(L.b)){bad();setMsg('Careful — that would cut through the stitches. Keep both ends <b>inside</b> the stitched box.');return;}if(dist(L.a,L.b)<box.w*.6){bad();setMsg('A bit longer — the slit should run almost the full length of the box so the button fits.');return;}
-    cutter=new Cutter([L.a,L.b],()=>{cutter=null;cutDone=true;gap=0;setTimeout(()=>DONE(isShirt?'Repeat for the other five. Tip: put a pin across each end before cutting so the scissors can’t overshoot.':'Jacket buttonholes go on the right front for menswear, the left for womenswear. Repeat for the second one.','Buttonhole <em>done</em>.'),700);},null,200);slicer.line=null;b1On(false);}
-  return{enter(){if(isShirt)ui({kicker:KICK(),title:'Space the <em>buttonholes</em>.',msg:`The top and bottom ones are marked. Tap the centre-front line to mark the other ${n-2} — evenly spaced. Gap = distance ÷ ${n-1}.`,b2:{label:'Restart',fn:replay}});else{ui({kicker:KICK(),title:'Mark the <em>buttonholes</em>.',msg:'Jacket buttonholes run horizontally, starting 1.5 cm in from the front edge. The top one sits at the lapel break point; the second about 10 cm below.',b1:{label:'Stitch & open them →',fn:toSlice},b2:{label:'Restart',fn:replay}});}},
+    cutter=new Cutter([L.a,L.b],()=>{cutter=null;cutDone=true;gap=0;setTimeout(()=>DONE(isShirt?'Repeat for the other five. Tip: put a pin across each end before cutting so the scissors can’t overshoot.':jacket?'Jacket buttonholes go on the right front for menswear, the left for womenswear. Repeat for the second one.':'Now the button goes on the other end of the waistband, lined up under the buttonhole.','Buttonhole <em>done</em>.'),700);},null,200);slicer.line=null;b1On(false);}
+  return{enter(){if(isShirt)ui({kicker:KICK(),title:'Space the <em>buttonholes</em>.',msg:`The top and bottom ones are marked. Tap the centre-front line to mark the other ${n-2} — evenly spaced. Gap = distance ÷ ${n-1}.`,b2:{label:'Restart',fn:replay}});else{ui({kicker:KICK(),title:jacket?'Mark the <em>buttonholes</em>.':'Mark the <em>buttonhole</em>.',msg:jacket?'Jacket buttonholes run horizontally, starting 1.5 cm in from the front edge. The top one sits at the lapel break point; the second about 10 cm below.':'The waistband buttonhole runs lengthwise along the overlapping end, 1.5 cm in from the edge. Make it as long as the button is wide, plus 3 mm.',b1:{label:'Stitch & open them →',fn:toSlice},b2:{label:'Restart',fn:replay}});}},
     bounds(){return phase==='mark'?{x:320,y:20,w:360,h:610}:{x:250,y:200,w:500,h:240};},
     update(dt){t+=dt;if(cutter)cutter.update(dt);if(cutDone)gap=Math.min(1,gap+dt*3);},
     down(p){if(phase==='mark'){if(Math.abs(p.x-X)>GR(40))return;const cm=(p.y-50)/k+top;let best=-1,bd=1e9;tg.forEach((v,i)=>{if(marks.includes(i))return;const d=Math.abs(v-cm);if(d<bd){bd=d;best=i;}});if(best>=0&&bd<1.2){marks.push(best);pop();if(marks.length===tg.length){setTimeout(()=>{float(X,300,'Evenly spaced ✓','#2f7d55');setTimeout(toSlice,700);},200);}}else{bad();const g=((fixed[1]-fixed[0])/(n-1)).toFixed(1);setMsg(`Not evenly spaced. The gap should be about <b>${g} cm</b> — use the ruler.`);}return;}if(phase==='slice'&&!cutter&&!cutDone)slicer.down(p);},
@@ -750,7 +900,7 @@ function ButtonholeScene(id){const isShirt=id==='shirt';const D=DR()[id];const h
 
 // ───────── buttons
 function ButtonScene(id){const c=P(500,330),o=24;const holes=[P(c.x-o,c.y-o),P(c.x+o,c.y-o),P(c.x+o,c.y+o),P(c.x-o,c.y+o)];const seq=[0,2,1,3,0,2,1,3].map((h,i)=>({h,dir:i%2?'down':'up'}));
-  const bcol=id==='jeans'?'#b87333':id==='suit'?'#3b2f2a':'#efe9de';let st,phase='sew',t=0,loop=null,wraps=0,trail=[];const hex=()=>fabOf(id);
+  const bcol=id==='jeans'?'#b87333':id==='suit'?'#3b2f2a':id==='aline'?'#8a5a3c':'#efe9de';let st,phase='sew',t=0,loop=null,wraps=0,trail=[];const hex=()=>fabOf(id);
   st=Stitcher({path:[holes[0],holes[2]],guided:true,holes,seq,pxcm:60,L:1,rule:'running',noKnot:true,showFirst:4,wrong:s=>s.dir==='up'?'Come up through the glowing hole.':'Go down diagonally — through the hole opposite.',onError:m=>setMsg(m),onPierce:n=>{if(n===2)setMsg('One diagonal done. Now the other diagonal: up, then down across.');if(n===4)setMsg('That’s an X. Go round once more for strength.');},
     onDone:()=>{setTimeout(()=>{phase='shank';ui({kicker:KICK(),title:'Wrap a <em>shank</em>.',msg:'Bring the needle up under the button and wind the thread round the stitches 3 times. This little stem gives room for the fabric of the buttonhole. Circle the button to wrap it.',b2:{label:'Restart',fn:replay}});},300);}});
   return{enter(){ui({kicker:KICK(),title:'Sew on the <em>button</em>.',msg:id==='jeans'?'Real jeans use a hammered tack button — a hand-sewn shank button works just as well. Sew it in an X through the four holes.':'Sew it on in an X: up through one hole, down through the hole opposite. Leave a matchstick’s gap under the button.',b2:{label:'Restart',fn:replay}});},
@@ -798,9 +948,106 @@ function FlyScene(id){const k=20,cfx=600,top=70;const J=[P(cfx-3.5*k,top)].conca
     draw(){cloth(swatch(360,50,360,510),hex(),{thick:2});ctx.save();ctx.globalAlpha=.3;rr(cfx-12,top+6,24,13*k,4);ctx.fillStyle='#222';ctx.fill();for(let y=top+10;y<top+13*k;y+=5){ctx.fillStyle='#b9b6ae';ctx.fillRect(cfx-6,y,12,2.4);}ctx.restore();
       chalk([P(cfx,top-10),P(cfx,top+24*k)],1.4,chalkCol(hex()));font(11,700);ctx.fillStyle='rgba(255,255,255,.55)';ctx.save();ctx.translate(cfx+14,top+80);ctx.rotate(Math.PI/2);ctx.fillText('CENTRE FRONT',0,0);ctx.restore();st.draw(t);}};}
 
+// ───────── zips (centred zip: tack, place, stitch, unpick, open)
+function drawZip(x,top,bot,sep,sy,zW){const tw=zW/2,k=zW/2.6;ctx.save();shadow(6,3,.22);
+  for(const s of[-1,1]){const inn=[];for(let y=top-.8*k;y<=bot+.9*k;y+=4)inn.push(P(x+s*sep(y),y));const out=inn.map(p=>P(p.x+s*tw,p.y)).reverse();path(inn.concat(out));ctx.fillStyle='#34363d';ctx.fill();}
+  noShadow();for(let y=top,i=0;y<=bot;y+=3.4,i++){const s=i%2?1:-1,g=sep(y);ctx.fillStyle=i%2?'#dcdcd8':'#b9b9b5';ctx.fillRect(x+s*(1.2+g)-3.4,y,6.8,2.3);}
+  ctx.fillStyle='#c9c9c5';[-1,1].forEach(s=>ctx.fillRect(x+s*(2+sep(top-4))-2.5,top-5,5,3));ctx.fillRect(x-4.5,bot+3,9,5);
+  if(sy!=null){metal(x-8,sy-9,16,20,4,{sb:5,so:3});metal(x-3.5,sy+9,7,20,3,{sb:4,so:2});dot(P(x,sy+24),1.6,'rgba(0,0,0,.3)');}ctx.restore();}
+function seamRipper(p){ctx.save();ctx.translate(p.x,p.y);ctx.rotate(-.55);shadow(6,4,.3);const g=ctx.createLinearGradient(0,-5,0,5);g.addColorStop(0,'#f2f2f1');g.addColorStop(1,'#b5b6b9');ctx.fillStyle=CORAL;rr(14,-6,46,12,6);ctx.fill();noShadow();ctx.strokeStyle='#a9aaae';ctx.lineWidth=2.4;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(14,0);ctx.lineTo(1,0);ctx.stroke();ctx.beginPath();ctx.moveTo(1,0);ctx.quadraticCurveTo(-4,-1,-2,-5);ctx.stroke();dot(P(2,2.5),2.6,CORAL);ctx.restore();}
+function ZipScene(id){const basic=id==='basics';const hex=()=>fabOf(id),wrong=()=>shade(hex(),lum(hex())>.6?-.08:.35);
+  const k=17,cx=500,y0=78,zl=id==='pencil'?20:id==='aline'?18:16,zt=y0+1.5*k,zb=zt+zl*k,zh=zb-zt,yB=Math.max(zb+3.5*k,y0+24*k),X0=cx-9*k,X1=cx+9*k,zW=2.6*k,TACK='rgb(70,140,210)';
+  let phase='place',t=0,zp=P(cx+12.5*k,(zt+zb)/2+40),drag=false,off=P(0,0),pinsT=-1,flip=-1,st=null,rip=P(cx+4*k,y0+4*k),ripOn=false,pull=0,pdrag=false,lt=0;
+  const tgt=P(cx,(zt+zb)/2),tack=[];for(let y=y0+.25*k;y<zb-.3*k;y+=.9*k)tack.push({y,on:true});
+  const U=[P(cx-.8*k,y0+.5*k),P(cx-.8*k,zb+.6*k),P(cx+.8*k,zb+.6*k),P(cx+.8*k,y0+.5*k)];
+  const sY=()=>zt+pull*(zh-.6*k),gap=y=>{if(phase!=='open'&&phase!=='done')return 0;const sy=sY();return y<sy?.42*k*clamp((sy-y)/(3*k),0,1):0;};
+  const where=basic?'the seam':id==='aline'?'the left side seam':'the centre-back seam';
+  const zipRect=()=>[P(zp.x-zW/2,zp.y-zh/2-.8*k),P(zp.x+zW/2,zp.y-zh/2-.8*k),P(zp.x+zW/2,zp.y+zh/2+.9*k),P(zp.x-zW/2,zp.y+zh/2+.9*k)];
+  function locked(){phase='pinned';pinsT=0;pop();ui({kicker:KICK(),title:'Pinned in <em>place</em>.',msg:'Pins go across the zip tape. Now turn it over — you stitch from the right side, so you can see your stitches are straight and even.',b1:{label:'Turn it over →',fn:()=>{flip=0;b1On(false);}},b2:{label:'Restart',fn:replay}});}
+  function startStitch(){phase='stitch';st=Stitcher({path:U,guided:true,nHoles:16,rule:'running',pxcm:k,L:1,showFirst:5,wrong:()=>'Follow the chalk line — the next hole along.',onError:m=>setMsg(m),onDone:()=>setTimeout(()=>{phase='unpick';ui({kicker:KICK(),title:'Unpick the <em>tacking</em>.',msg:'The blue tacking stitches held the seam closed while you worked. Drag the seam ripper down the seam to snip them out.',b2:{label:'Restart',fn:replay}});},400)});
+    ui({kicker:KICK(),title:'Stitch around the <em>zip</em>.',msg:'Tap the holes: down one side, across below the bottom stop, and up the other side, 8 mm from the seam. In real life, use tiny backstitches here (a “prick stitch”).',b2:{label:'Restart',fn:replay}});}
+  return{get dbg(){return{phase,st,tgt,zp,tack,sY:sY(),cx,zt,zh,k};},enter(){ui({kicker:KICK(),title:'Place the <em>zip</em>.',msg:`You’re looking at the wrong side of ${where}. Below the zip it’s sewn; above, it’s <b>tacked</b> shut with big temporary stitches and pressed open. Drag the zip <b>face down</b> onto the seam, teeth centred, top stop 1.5 cm below the edge.`,b2:{label:'Restart',fn:replay}});},
+    bounds(){return{x:X0-30,y:y0-30,w:(phase==='place'?Math.max(X1,zp.x+zW):X1)-X0+60,h:yB-y0+60};},
+    update(dt){t+=dt;if(phase==='place'&&!drag&&dist(zp,tgt)<GR(18)){zp=P(lerp(zp.x,tgt.x,.3),lerp(zp.y,tgt.y,.3));if(dist(zp,tgt)<.6){zp=P(tgt.x,tgt.y);locked();}}if(pinsT>=0)pinsT+=dt;
+      if(flip>=0&&flip<1){flip=Math.min(1,flip+dt*1.4);if(flip>=1)startStitch();}if(st)st.update(dt);},
+    down(p){if(phase==='place'&&inPoly(p,zipRect())){drag=true;off=P(zp.x-p.x,zp.y-p.y);return;}if(phase==='stitch'){st.down(p);return;}if(phase==='unpick'){ripOn=true;this.move(p);return;}if(phase==='open'&&dist(p,P(cx,sY()+10))<GR(30))pdrag=true;},
+    move(p){if(drag){zp=P(p.x+off.x,p.y+off.y);return;}if(phase==='stitch'){st.move(p);return;}if(phase==='unpick'){rip=P(p.x,p.y);if(ripOn){let n=0;tack.forEach(q=>{if(q.on&&Math.abs(p.x-cx)<GR(20)&&Math.abs(p.y-(q.y+.25*k))<GR(14)){q.on=false;n++;}});if(n){snip(.35);if(tack.every(q=>!q.on)){phase='open';ripOn=false;ui({kicker:KICK(),title:'Open the <em>zip</em>.',msg:'All the tacking is out. Drag the zip pull down to open it.',b2:{label:'Restart',fn:replay}});}}}return;}
+      if(pdrag){pull=clamp((p.y-zt)/(zh-.6*k),0,1);const y=Math.floor(pull*40);if(y!==lt){lt=y;tick();}}},
+    hover(p){if(phase==='stitch')st.move(p);else if(phase==='unpick')rip=P(p.x,p.y);else if(phase==='place')cv.style.cursor=inPoly(p,zipRect())?'grab':'default';else if(phase==='open')cv.style.cursor=dist(p,P(cx,sY()+10))<GR(30)?'ns-resize':'default';},
+    up(){if(drag){drag=false;if(phase==='place'){const dx=(zp.x-tgt.x)/k,dy=(zp.y-tgt.y)/k;if(Math.abs(dx)>.3)setMsg(`The teeth need to sit right on the seam line — that’s <b>${Math.abs(dx).toFixed(1)} cm</b> ${dx>0?'to the right':'to the left'}.`);else setMsg(`Nearly — slide it ${dy>0?'up':'down'} so the top stop sits 1.5 cm below the top edge.`);}}ripOn=false;
+      if(pdrag){pdrag=false;if(pull>.93&&phase==='open'){phase='done';pop();setTimeout(()=>DONE(basic?'A centred zip: the folded seam edges meet over the teeth and hide them. Skirts, dresses and trousers all use this method.':'The folded seam edges meet over the teeth and hide the zip. Sew a few stitches across the bottom of the tape for strength.','Zip <em>in</em>.'),300);}else if(phase==='open')setMsg('All the way down — to the bottom stop.');}},
+    draw(){const fl=flip<0?0:flip,sx=Math.abs(Math.cos(fl*Math.PI)),rightSide=fl>=.5;ctx.save();if(flip>=0&&flip<1){ctx.translate(cx,0);ctx.scale(Math.max(.02,sx),1);ctx.translate(-cx,0);}
+      if(!rightSide){const r=[P(X0,y0),P(X1,y0),P(X1,yB),P(X0,yB)];cloth(r,wrong(),{thick:2});
+        [-1,1].forEach(s=>{ctx.save();ctx.fillStyle=weave(shade(wrong(),lum(wrong())>.6?-.05:.08));ctx.fillRect(s<0?cx-1.5*k:cx,y0,1.5*k,yB-y0);ctx.restore();});
+        ctx.save();ctx.strokeStyle='rgba(0,0,0,.35)';ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(cx,y0);ctx.lineTo(cx,yB);ctx.stroke();ctx.restore();
+        tack.forEach(q=>cable([P(cx,q.y),P(cx,q.y+.5*k)],TACK,2.4));for(let y=zb;y<yB-6;y+=.45*k)cable([P(cx,y),P(cx,y+.35*k)],THREAD,2.2);
+        font(11,600);ctx.fillStyle=lum(wrong())>.6?'rgba(0,0,0,.35)':'rgba(255,255,255,.55)';ctx.textAlign='center';ctx.fillText('WRONG SIDE · TOP EDGE',cx,y0+16);
+        if(phase==='place'){ctx.save();ctx.globalAlpha=.45+.3*Math.sin(t*3);ctx.setLineDash([5,5]);ctx.strokeStyle=CORAL;ctx.lineWidth=1.6;ctx.strokeRect(tgt.x-zW/2,tgt.y-zh/2-.8*k,zW,zh+1.7*k);ctx.restore();}
+        drawZip(zp.x,zp.y-zh/2,zp.y+zh/2,()=>0,null,zW);
+        if(pinsT>=0)[0,1,2,3].forEach(i=>drawPin(P(cx+(i%2?1:-1)*.9*k,zt+(i<2?.3:.75)*zh),i%2?.5:-.5,clamp(pinsT*3-i*.5,0,1)));
+        if(phase==='place'&&!drag&&t<6){ctx.save();ctx.globalAlpha=.7;font(12,600);ctx.fillStyle=CORAL;ctx.textAlign='center';ctx.fillText('drag the zip',zp.x,zp.y+zh/2+2*k);ctx.restore();}}
+      else{drawZip(cx,zt,zb,y=>gap(y)*.55,null,zW);const L=[],R=[];for(let y=y0;y<=yB;y+=4){L.push(P(cx-gap(y),y));R.push(P(cx+gap(y),y));}
+        cloth([P(X0,y0)].concat(L,[P(X0,yB)]),hex(),{thick:2});cloth([P(X1,y0)].concat(R,[P(X1,yB)]),hex(),{thick:2});
+        ctx.save();ctx.strokeStyle='rgba(0,0,0,.4)';ctx.lineWidth=1.2;path(L,false);ctx.stroke();path(R,false);ctx.stroke();ctx.restore();
+        tack.forEach(q=>{if(q.on)cable([P(cx,q.y),P(cx,q.y+.5*k)],TACK,2.4);});
+        if(phase==='stitch')chalk(U,1.6,chalkCol(hex()));if(st)st.draw(t);
+        if(phase==='open'||phase==='done'){const sy=sY();metal(cx-7,sy-6,14,14,4,{sb:5,so:3});metal(cx-3.5,sy+6,7,18,3,{sb:4,so:2});if(phase==='open'&&!pdrag&&pull<.05)ring(P(cx,sy+12),t,16);}
+        if(phase==='unpick')seamRipper(rip);
+        font(11,600);ctx.fillStyle=lum(hex())>.6?'rgba(0,0,0,.35)':'rgba(255,255,255,.55)';ctx.textAlign='left';ctx.fillText('RIGHT SIDE',X0+12,y0+18);}
+      ctx.restore();}};}
+
+// ───────── elastic waist (casing, thread with a safety pin, join)
+function ElasticScene(id){const hex=()=>fabOf(id),wrong=()=>shade(hex(),lum(hex())>.6?-.08:.35),el=r1(state.m.waist*.9);
+  const k=40,X0=170,X1=830,YT=150,YB=470,cY=YT+3.5*k-.3*k,gx0=700,gx1=800,C=P(500,330),RX=270,RY=105,a0=Math.PI/2;
+  let phase='fold',f=0,drag=false,t=0,st=null,acc=0,last=null,jst=null,lastTk=0;
+  const ell=(a,dr=0)=>P(C.x+Math.cos(a)*(RX+dr),C.y+Math.sin(a)*(RY+dr*.4));
+  function uiFold(){ui({kicker:KICK(),title:'Fold the <em>casing</em>.',msg:'The top edge is already pressed under 1 cm. Drag it down to fold a <b>3.5 cm</b> casing — room for 2.5 cm elastic to slide through.',b2:{label:'Restart',fn:replay}});}
+  function startStitch(){phase='stitch';st=Stitcher({a:P(210,cY),b:P(gx0,cY),pxcm:k,rule:'running',guided:false,L:.8,tolOff:.28,onError:m=>setMsg(m),onDone:s=>{float(450,cY-50,'★'.repeat(s.stars)+'☆'.repeat(3-s.stars),CORAL);setTimeout(startThread,800);}});
+    ui({kicker:KICK(),title:'Stitch the <em>casing</em>.',msg:'Running stitch along the folded edge, 3 mm in. Stop at the gap: you need a <b>5 cm opening</b> to feed the elastic through.',b2:{label:'Restart',fn:replay}});}
+  function startThread(){phase='thread';ui({kicker:KICK(),title:'Thread the <em>elastic</em>.',msg:`Cut the elastic to your waist minus 10%: <b>${el} cm</b>. Pin a safety pin to one end and work it all the way round inside the casing. Circle the waist to push it through.`,b2:{label:'Restart',fn:replay}});}
+  function startJoin(){phase='join';const hs=[[455,275],[500,275],[545,275],[545,330],[545,385],[500,385],[455,385],[455,330]].map(q=>P(q[0],q[1]));
+    jst=Stitcher({path:[hs[0],hs[4]],guided:true,holes:hs,seq:[0,1,2,3,4,5,6,7,0,4].map((h,i)=>({h,dir:i%2?'down':'up'})),pxcm:40,L:1,rule:'running',showFirst:4,wrong:()=>'Follow the glowing hole round the square.',onError:m=>setMsg(m),onDone:()=>setTimeout(()=>DONE('Tuck the joined elastic inside, stitch the gap closed, then stretch the waist a few times so the gathers spread out evenly.','Elastic <em>waist</em>.'),400)});
+    ui({kicker:KICK(),title:'Join the <em>ends</em>.',msg:'Overlap the elastic ends by 2 cm and stitch a box through both layers, with a line across it — the strongest way to join elastic.',b2:{label:'Restart',fn:replay}});}
+  return{get dbg(){return{phase,st,jst,C,RX,RY,YT,k,acc};},enter(){uiFold();},
+    bounds(){return phase==='thread'?{x:190,y:180,w:620,h:300}:phase==='join'?{x:150,y:190,w:700,h:290}:{x:100,y:110,w:770,h:390};},
+    update(dt){t+=dt;if(!drag&&phase==='fold')f=lerp(f,0,.18);if(st)st.update(dt);if(jst)jst.update(dt);},
+    down(p){if(phase==='fold'){if(p.y<YT+260){drag=true;this.move(p);}return;}if(phase==='stitch'){st.down(p);return;}if(phase==='join'){jst.down(p);return;}
+      if(phase==='thread'){last=Math.atan2((p.y-C.y)/RY,(p.x-C.x)/RX);}},
+    move(p){if(phase==='fold'){if(drag)f=clamp((p.y-YT)/k,0,5.5);return;}if(phase==='stitch'){st.move(p);return;}if(phase==='join'){jst.move(p);return;}
+      if(phase==='thread'&&last!=null){const a=Math.atan2((p.y-C.y)/RY,(p.x-C.x)/RX);let d=a-last;if(d>Math.PI)d-=Math.PI*2;if(d<-Math.PI)d+=Math.PI*2;last=a;if(Math.abs(d)<1)acc+=d;const tk=Math.floor(Math.abs(acc)/.35);if(tk!==lastTk){lastTk=tk;tone(300+Math.random()*60,.04,.03,'sine');}
+        if(Math.abs(acc)>=Math.PI*2){last=null;phase='through';pop();float(C.x,C.y+RY+40,'All the way round ✓','#2f7d55');setTimeout(startJoin,900);}}},
+    hover(p){if(phase==='stitch')st.move(p);else if(phase==='join')jst.move(p);else if(phase==='fold')cv.style.cursor=p.y<YT+260?'ns-resize':'default';},
+    up(){if(phase==='fold'&&drag){drag=false;if(Math.abs(f-3.5)<=.35){f=3.5;phase='folded';pop();float(500,YT+3.5*k+30,'3.5 cm ✓','#2f7d55');setTimeout(startStitch,600);}else{bad();setMsg(`That’s <b>${f.toFixed(1)} cm</b> — aim for 3.5 cm so the elastic fits snugly.`);}}
+      if(phase==='thread'&&last!=null){last=null;if(Math.abs(acc)>.3)setMsg('Keep going — the pin has to travel <b>all the way round</b> the waist.');}},
+    draw(){if(phase==='fold'||phase==='folded'||phase==='stitch'){cloth([P(X0,YT),P(X1,YT),P(X1,YB),P(X0,YB)],wrong(),{thick:2});
+        metal(X0-56,YT-12,40,236,8,{sb:8,so:4,sa:.18});for(let i=0;i<=55;i++){const y=YT+i*k/10,h=i%10===0?14:i%5===0?9:5;ctx.fillStyle='rgba(29,32,39,.55)';ctx.fillRect(X0-18-h,y-.5,h,1);if(i%10===0){font(10,600);ctx.textAlign='right';ctx.fillText(i/10,X0-36,y+3.5);}}
+        const ff=phase==='fold'?f:3.5,outer=shade(hex(),lum(hex())>.6?-.12:.26);if(ff>.02){ctx.save();shadow(8,3,.22);ctx.fillStyle=weave(outer);ctx.fillRect(X0,YT,X1-X0,ff*k);noShadow();ctx.fillStyle='rgba(0,0,0,.12)';ctx.fillRect(X0,YT+ff*k-2,X1-X0,2);ctx.restore();}
+        if(phase==='fold'){ctx.save();ctx.globalAlpha=.4+.2*Math.sin(t*3);dashed([P(X0,YT+3.5*k),P(X1,YT+3.5*k)],CORAL,1.5);ctx.restore();if(drag||f>.05)pillText(X1-60,YT+f*k+18,`${f.toFixed(1)} cm`,'#fff',Math.abs(f-3.5)<=.35?'#2f7d55':INK,13);else{ctx.save();ctx.globalAlpha=.6+.3*Math.sin(t*3);font(12,600);ctx.fillStyle=CORAL;ctx.textAlign='center';ctx.fillText('↓ drag the top edge down',500,YT+24);ctx.restore();}}
+        if(phase==='stitch'){chalk([P(210,cY),P(gx0,cY)],1.6,chalkCol(outer));ctx.save();ctx.strokeStyle=CORAL;ctx.lineWidth=1.5;ctx.setLineDash([3,3]);ctx.beginPath();ctx.moveTo(gx0+6,cY+14);ctx.lineTo(gx0+6,cY+22);ctx.lineTo(gx1,cY+22);ctx.lineTo(gx1,cY+14);ctx.stroke();ctx.restore();font(11,700);ctx.fillStyle=CORAL;ctx.textAlign='center';ctx.fillText('LEAVE A GAP',(gx0+gx1)/2,cY+38);st.draw(t);}
+        font(11,600);ctx.fillStyle=lum(wrong())>.6?'rgba(0,0,0,.35)':'rgba(255,255,255,.5)';ctx.textAlign='center';ctx.fillText('WRONG SIDE · WAIST EDGE',500,YB-16);return;}
+      if(phase==='thread'||phase==='through'){const pr=clamp(Math.abs(acc)/(Math.PI*2),0,1),sg=acc<0?-1:1;
+        ctx.save();ctx.lineWidth=44;ctx.strokeStyle=weave(shade(hex(),-.22));ctx.beginPath();ctx.ellipse(C.x,C.y,RX,RY,0,Math.PI,Math.PI*2);ctx.stroke();ctx.restore();
+        ctx.save();ctx.fillStyle='rgba(30,25,20,.22)';ctx.beginPath();ctx.ellipse(C.x,C.y,RX-22,RY-22,0,0,7);ctx.fill();ctx.restore();
+        ctx.save();shadow(14,8,.2);ctx.lineWidth=44;ctx.strokeStyle=weave(hex());ctx.beginPath();ctx.ellipse(C.x,C.y,RX,RY,0,0,Math.PI);ctx.stroke();ctx.restore();
+        if(pr>0){ctx.save();ctx.globalAlpha=.5;ctx.strokeStyle='#f5f3ee';ctx.lineWidth=12;ctx.lineCap='round';ctx.beginPath();ctx.ellipse(C.x,C.y,RX,RY,0,Math.min(a0,a0+acc),Math.max(a0,a0+acc));ctx.stroke();ctx.restore();
+          ctx.save();ctx.strokeStyle='rgba(0,0,0,.22)';ctx.lineWidth=1.4;for(let a=0;a<Math.abs(acc);a+=.09){const q=a0+sg*a,o=ell(q,-20),i2=ell(q,20);ctx.beginPath();ctx.moveTo(o.x,o.y);ctx.lineTo(i2.x,i2.y);ctx.stroke();}ctx.restore();}
+        const g=ell(a0,16);ctx.save();ctx.fillStyle='rgba(20,16,12,.6)';rr(g.x-16,g.y-4,32,8,4);ctx.fill();ctx.restore();cable([P(g.x-6,g.y),P(g.x-20,g.y+30),P(g.x-30,g.y+48)],'#f2efe9',9);
+        const pp=ell(a0+acc);ctx.save();ctx.globalAlpha=Math.sin(a0+acc)<0?.55:1;ctx.translate(pp.x,pp.y);ctx.rotate(a0+acc+Math.PI/2);shadow(4,2,.25);ctx.strokeStyle='#c3c4c8';ctx.lineWidth=2.4;ctx.beginPath();ctx.moveTo(-14,-2);ctx.lineTo(12,-2);ctx.arc(12,0,2.2,-Math.PI/2,Math.PI/2);ctx.lineTo(-14,2);ctx.stroke();noShadow();dot(P(-15,0),4,'#b0b1b5');ctx.restore();
+        if(phase==='thread'){ctx.save();ctx.setLineDash([4,5]);ctx.strokeStyle=rgba(CORAL,.6);ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(C.x,C.y,RX+46,RY+40,0,t*1.2,t*1.2+Math.PI*1.7);ctx.stroke();ctx.restore();if(Math.abs(acc)<.05)ring(pp,t,14);}
+        pillText(C.x,C.y,`${Math.round(pr*100)}% round`,'#fff',INK,13);return;}
+      cloth(swatch(170,200,660,260),hex(),{thick:2});const elas=(x0,x1)=>{ctx.save();shadow(6,3,.2);ctx.fillStyle='#f3f1ec';ctx.fillRect(x0,262,x1-x0,136);noShadow();ctx.fillStyle='rgba(0,0,0,.06)';for(let x=x0+3;x<x1;x+=5)ctx.fillRect(x,262,1.4,136);ctx.restore();};elas(190,560);elas(440,810);jst.draw(t);}};}
+
+// ───────── waistband press
+function WaistbandScene(id){const len=r1(state.m.waist+6);
+  return IronLineScene({title:'Press the <em>waistband</em>.',msg:`The waistband is a ${len} × 9 cm strip. Fold it in half lengthwise, wrong sides together, and press a sharp crease along the chalk line.`,line:resample([P(180,330),P(820,330)],14),
+    drawBase:()=>{const hex=fabOf(id);cloth([P(160,222),P(840,222),P(840,438),P(160,438)],hex,{thick:2});ctx.save();ctx.globalAlpha=.25;cloth([P(160,222),P(840,222),P(840,258),P(160,258)],'#ffffff',{thick:0,shadow:false});ctx.restore();font(11,700);ctx.fillStyle=lum(hex)>.6?'rgba(0,0,0,.35)':'rgba(255,255,255,.55)';ctx.textAlign='left';ctx.fillText(`WAISTBAND · ${len} cm · INTERFACED HALF ABOVE THE LINE`,176,420);},
+    ironStart:P(820,540),chalk:chalkCol(fabOf(id)),doneMsg:'Pin the long edge without interfacing to the skirt waist, right sides together, and backstitch 1.5 cm in. Fold the band over to the inside along the crease, turn the raw edge under and hand-stitch it down.',doneTitle:'Waistband <em>pressed</em>.',bounds:{x:130,y:190,w:740,h:400}});}
+
 // ═════════════════════════ FINISHED GARMENTS ═════════════════════════
 function garmentShapes(id,o={}){const D=DR()[id],out=[];const add=(pts,sh=0)=>out.push({pts,sh});
-  if(id==='shift'||id==='darted')add(fullH(cutPoly(id,'front')));
+  if(['shift','darted','top','pencil'].includes(id))add(fullH(cutPoly(id,'front')));
+  else if(id==='aline'){add(fullH(cutPoly(id,'front')));add([P(-D.wb,-3.5),P(D.wb,-3.5),P(D.wb,.2),P(-D.wb,.2)],.05);}
+  else if(id==='pants'){const f=cutPoly(id,'front'),r=D.front.rise,T=p=>p.y>r?P(p.x+(p.y-r)*.12,p.y):p,R=f.map(T);add(R.map(mxP),-.03);add(R);}
   else if(id==='sundress'){const {wy,qW,sl}=D,hw=qW*2.1,sk=[],n=24;for(let i=0;i<=n;i++)sk.push(P(lerp(-qW,qW,i/n),wy+Math.sin(i*1.9)*.4));for(let i=n;i>=0;i--)sk.push(P(lerp(-hw,hw,i/n),wy+sl-1.5+Math.sin(i*1.3)*.6));add(sk);add(fullH(cutPoly(id,'bodice')),.04);}
   else if(id==='shirt'||id==='suit'){const sv=fullH(id==='shirt'?cutPoly(id,'sleeve'):D.sleeve.poly),sp=D.sp;const R=sv.map(p=>{const r=rot(P(p.x*.58,p.y),-.42);return P(sp.x+r.x,sp.y+r.y);});add(R,-.06);add(R.map(mxP),-.06);const f=cutPoly(id,'front');add(f.map(mxP),-.02);add(f);
     if(id==='shirt')add([P(-8.5,-1.5),P(8.5,-1.5),P(10,3.5),P(1.2,10),P(0,8.5),P(-1.2,10),P(-10,3.5)],.08);
@@ -812,19 +1059,21 @@ function garmentDetails(id,M,s){const D=DR()[id];const st=(pts,col,w=1.3,dash=[4
   const lt=rgba('#ffffff',.4),dk='rgba(0,0,0,.25)';
   if(id==='shirt'){st([P(1.4,10),P(1.4,D.sl-1)],dk,1);for(let i=0;i<6;i++)btn(P(0,10+i*(D.sl-26)/5),.75,'#f3efe6');st([P(-16,D.armD+1),P(-7,D.armD+1),P(-7,D.armD+11),P(-16,D.armD+11),P(-16,D.armD+1)],dk,1);}
   if(id==='jeans'){const f=D.front;st([P(-3.5,.5),P(-3.5,f.rise-12),P(-1.5,f.rise-8.5),P(0,f.rise-8)],GOLD,1.6);[1,-1].forEach(g=>{st([P(g*(f.wW-6.5),.3),P(g*(f.wW-3),6),P(g*(f.hipW-.4),9)],GOLD,1.6);dot(M(P(g*(f.hipW-.6),9)),Math.max(1.4,.5*s),'#b87333');st([P(g*(f.hipW-.8),f.rise+2),P(g*(f.cx+9),f.O-1)],GOLD,1.2);});btn(P(0,-2),1,'#b87333');}
+  if(id==='pants'){const f=D.front;for(let x=-f.hipW+.8;x<f.hipW;x+=1.3)st([P(x,-4.1),P(x+.25,-.4)],dk,.8,[1,0]);st([P(-f.hipW,0),P(f.hipW,0)],dk,1,[3,2]);}
   if(id==='suit'){[1,-1].forEach(g=>{st([P(g*-2.5,D.bp),P(g*7,1.5)],dk,1.2,[1,0]);st([P(g*-9,D.wy+10),P(g*-19,D.wy+9)],dk,1.4,[1,0]);});btn(P(0,D.bp+1),1.2,'#3b2f2a');btn(P(0,D.bp+11),1.2,'#3b2f2a');
     const tr=D.trouser,dx=D.front.bb.x1+tr.hipW+18;[1,-1].forEach(g=>st([P(dx+g*tr.cx,12),P(dx+g*tr.cx,tr.O+4)],lt,1.1,[1,0]));}}
-function FinalScene(id){let t=0;const p=projOf(id),dress=['shift','sundress','darted'].includes(id);
-  return{enter(){burst(500,200,60);chime();state.done[keyOf(id,curI)]=true;save();ui({kicker:KICK(),title:p.doneTitle,msg:p.doneMsg,extra:swatches(id),b1:{label:'Pattern card',fn:()=>patternCard(id)},b2:{label:'All projects',fn:home}});},
+function FinalScene(id){let t=0;const p=projOf(id),skirt=SKIRTS.includes(id),dress=DRESSES.includes(id)||skirt,yo=skirt?42:10.2;
+  return{enter(){burst(500,200,60);chime();state.done[keyOf(id,curI)]=true;save();ui({kicker:KICK(),title:p.doneTitle,msg:p.doneMsg,extra:swatches(id),b1:{label:'Get the pattern',fn:()=>patternCard(id)},b2:{label:'All projects',fn:home}});},
     bounds(){return dress?(portrait?{x:330,y:10,w:340,h:630}:{x:50,y:0,w:900,h:H}):{x:40,y:10,w:920,h:620};},
     update(dt){t+=dt;},
     draw(){const hex=fabOf(id);
       if(!dress){const sh=garmentShapes(id,{trousers:true});const {M,s}=fitMap(sh.flatMap(q=>q.pts),{x:110,y:30,w:780,h:580});sh.forEach(q=>cloth(q.pts.map(M),q.sh?shade(hex,q.sh):hex,{thick:2}));garmentDetails(id,M,s);return;}
-      const D=DR()[id],m=state.m,pr=bodyProfile(m),cx=500,top=26;const sh=garmentShapes(id);const maxY=Math.max(...sh.flatMap(q=>q.pts.map(p=>p.y)));const kk=Math.min(5.2,560/(maxY+12));
-      const f=y=>y<4?1:y<18?lerp(1,.62,(y-4)/14):.62;const M=q=>{const sway=Math.sin(t*1.3)*Math.max(0,(q.y-40)/60)*kk*.9*(q.y/maxY);return P(cx+q.x*f(q.y)*kk+sway,top+(q.y+10.2)*kk);};
+      const D=DR()[id],m=state.m,pr=bodyProfile(m),cx=500,top=26;const sh=garmentShapes(id);const maxY=Math.max(...sh.flatMap(q=>q.pts.map(p=>p.y)));const kk=Math.min(5.2,560/(maxY+yo+1.8));
+      const f=y=>{y+=yo-10.2;return y<4?1:y<18?lerp(1,.62,(y-4)/14):.62;};const M=q=>{const Y=q.y+yo-10.2,sway=Math.sin(t*1.3)*Math.max(0,(Y-40)/60)*kk*.9*(Y/(maxY+yo-10.2));return P(cx+q.x*f(q.y)*kk+sway,top+(q.y+yo)*kk);};
       drawForm(pr,cx,top,kk);
       sh.forEach(q=>{const pts=q.pts.map(M);ctx.save();path(pts);shadow(18,10,.22);ctx.fillStyle=hex;ctx.fill();noShadow();ctx.fillStyle=weave(q.sh?shade(hex,q.sh):hex);ctx.fill();ctx.clip();const bb=bbox(pts);const g=ctx.createLinearGradient(bb.x0,0,bb.x1,0);g.addColorStop(0,'rgba(0,0,0,.28)');g.addColorStop(.3,'rgba(255,255,255,.07)');g.addColorStop(.55,'rgba(0,0,0,0)');g.addColorStop(1,'rgba(0,0,0,.3)');ctx.fillStyle=g;ctx.fillRect(bb.x0,bb.y0,bb.w,bb.h);ctx.restore();ctx.save();path(pts);ctx.strokeStyle=shade(hex,-.35);ctx.lineWidth=1.1;ctx.stroke();ctx.restore();});
       if(id==='darted'){const d=D.dart;[1,-1].forEach(g=>{ctx.save();ctx.strokeStyle='rgba(0,0,0,.28)';ctx.lineWidth=1.3;path([M(P(g*d.x,d.y-14)),M(P(g*d.x,d.y)),M(P(g*d.x,d.y+12))],false);ctx.stroke();ctx.restore();});}
+      if(skirt){const d=D.dart;[1,-1].forEach(g=>{ctx.save();ctx.strokeStyle='rgba(0,0,0,.28)';ctx.lineWidth=1.3;path([M(P(g*d.x,0)),M(P(g*d.x,d.l))],false);ctx.stroke();ctx.restore();});}
       if(id==='sundress'){ctx.save();ctx.strokeStyle='rgba(0,0,0,.25)';ctx.lineWidth=1.2;path([M(P(-D.qW,D.wy)),M(P(D.qW,D.wy))],false);ctx.stroke();ctx.restore();}
       const hy=maxY-2;ctx.save();ctx.setLineDash([4,3]);ctx.strokeStyle=rgba('#ffffff',.35);ctx.lineWidth=1.2;ctx.beginPath();const a=M(P(-60,hy)),b=M(P(60,hy));ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.restore();
       if(!portrait){font(12,600);ctx.textAlign='left';[['Bust',m.bust],['Waist',m.waist],['Hips',m.hip],['Length',m.length]].forEach((r,i)=>{font(12,600);ctx.fillStyle='rgba(29,32,39,.45)';ctx.fillText(r[0],80,170+i*58);font(22,700);ctx.fillStyle=INK;ctx.fillText(r[1]+' cm',80,195+i*58);});
@@ -838,6 +1087,7 @@ cv.addEventListener('pointermove',e=>{const p=toV(e);if(down)scene&&scene.move&&
 const upH=e=>{if(!down)return;down=false;scene&&scene.up&&scene.up(toV(e));};
 cv.addEventListener('pointerup',upH);cv.addEventListener('pointercancel',upH);
 addEventListener('keydown',e=>{if(e.key==='Escape'&&!$modal.hidden)closeModal();});
+cv.addEventListener('wheel',e=>{if(scene&&scene.wheel){e.preventDefault();scene.wheel(e.deltaY);}},{passive:false});
 
 // ───────────────────────── loop
 let last=performance.now(),acc=0,gt=0;
@@ -849,7 +1099,7 @@ function render(dt){
   ctx.setTransform(DPR*view.s,0,0,DPR*view.s,DPR*view.ox,DPR*view.oy);
   if(scene){ctx.save();scene.draw();ctx.restore();}drawFx();
   if(fade>0){fade=Math.max(0,fade-dt*3.5);ctx.setTransform(1,0,0,1,0,0);ctx.fillStyle=`rgba(233,231,227,${fade})`;ctx.fillRect(0,0,cv.width,cv.height);}}
-window.__haute={get scene(){return scene},startStep,openProject,home,DR,view,state,adv(sec){for(let i=0;i<sec*60;i++){scene&&scene.update&&scene.update(1/60);updFx(1/60);}fade=0;layoutStage();render(0);}};
+window.__haute={get scene(){return scene},startStep,openProject,home,DR,view,state,sheetLayout,fullSVG,printPattern,patternCard,printModal,xpOf,adv(sec){for(let i=0;i<sec*60;i++){scene&&scene.update&&scene.update(1/60);updFx(1/60);}fade=0;layoutStage();render(0);}};
 home();requestAnimationFrame(frame);
 })();
 </script>
