@@ -13,6 +13,7 @@ A hands-on browser game that teaches you to sew real clothes — no classes, no 
 - **Real-size patterns:** every project prints its full pattern tiled onto A4 or US Letter paper, with a test square, page map and alignment marks. You can also download one big SVG for a copy shop.
 - **Start from a photo:** upload a picture of an outfit and an on-device AI (CLIP, running in your browser — photos are never uploaded) suggests the closest project and how to adapt it.
 - **Traditional garments:** step-by-step guides turn a base project into an abaya, kaftan, thobe/jalabiya, kurta, salwar, kimono-style robe, qipao, dashiki, or a sari blouse and petticoat. The guides are on the pattern card and the printed pattern.
+- **Materials (optional):** a shopping list sized to your pattern (fabric for 110/140/150 cm widths, plus zips, buttons, elastic and interfacing), a "Will it fit?" check for old sheets, duvet covers and curtains, and a guide to finding cheap or free materials.
 - After each step, a **"Doing it for real"** tip explains how to do that step on real fabric.
 
 Everything can be sewn by hand. Old bedsheets make great practice fabric.
