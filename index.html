@@ -574,7 +574,7 @@ function HomeScene(){let t=0,hov=-1,mode=null,B=[],ropes=[],labels=[],CH=600,scr
   place();const nb=BASICS.findIndex((b,i)=>!bDone(i));
   function click(p){this_hover(p);if(hov<0)return;tick();const b=B[hov];if(b.k==='b')startStep('basics',b.i);else openProject(PROJ[b.i].id);}
   function this_hover(p){hov=B.findIndex(b=>Math.abs(p.x-b.x)<b.w/2&&Math.abs(p.y-b.y)<b.h/2);cv.style.cursor=hov>=0?'pointer':'default';}
-  return{enter(){ui({kicker:'A free sewing school',title:'Learn to sew your own <em>clothes</em>.',msg:'Six short basics, then pick a project: dresses, a top, skirts, trousers, a shirt, jeans or a suit. Every pattern is drafted from <b>your</b> measurements and prints at real size — and it can all be sewn by hand.',b1:nb>=0?{label:nb===0?'Start the basics':`Continue · ${BASICS[nb].name}`,fn:()=>startStep('basics',nb)}:{label:'Open the shift dress',fn:()=>openProject('shift')},b2:{label:'Real-life guide',fn:materials}});},
+  return{enter(){ui({kicker:'A free sewing school',title:'Learn to sew your own <em>clothes</em>.',msg:'Six short basics, then pick a project: dresses, a top, skirts, trousers, a shirt, jeans or a suit. Every pattern is drafted from <b>your</b> measurements and prints at real size — and it can all be sewn by hand.',extra:'<button class="pill" id="phbtn" style="width:100%;height:40px;font-weight:600">📷 Start from a photo of an outfit</button>',b1:nb>=0?{label:nb===0?'Start the basics':`Continue · ${BASICS[nb].name}`,fn:()=>startStep('basics',nb)}:{label:'Open the shift dress',fn:()=>openProject('shift')},b2:{label:'Real-life guide',fn:materials}});$('phbtn').onclick=()=>{ac();tick();photoModal();};},
     bounds(){place();if(mode===2){vh=Math.min(CH,630*stageAR);scroll=clamp(scroll,0,Math.max(0,CH-vh));return{x:20,y:scroll,w:630,h:vh,snap:true};}return{x:20,y:20,w:960,h:CH-20};},
     update(dt){t+=dt;place();if(!dr&&Math.abs(vel)>.2){scroll+=vel;vel*=.92;}ropes.forEach(r=>r.step());B.forEach((b,i)=>b.lift=lerp(b.lift,i===hov?1:0,.2));},
     hover(p){this_hover(p);},
@@ -591,7 +591,7 @@ function HomeScene(){let t=0,hov=-1,mode=null,B=[],ropes=[],labels=[],CH=600,scr
 function ProjectScene(id){const p=projOf(id);let t=0,hov=-1,mode=null,B=[],ropes=[];const n=p.steps.length;const dn=i=>!!state.done[id+'.'+i];
   function place(){const m=portrait?2:3;if(m===mode)return;mode=m;B=p.steps.map((s,i)=>m===3?{i,x:200+(i%3)*300,y:80+((i/3)|0)*150,w:250,h:110,lift:0}:{i,x:175+(i%2)*310,y:75+((i/2)|0)*140,w:282,h:110,lift:0});ropes=chainRopes(B,dn);}
   place();const nx=p.steps.findIndex((s,i)=>!dn(i));
-  return{enter(){const basicsLeft=BASICS.some((b,i)=>!state.done['b'+i]);ui({kicker:KICK(),title:p.title,msg:`${p.desc} <b>You’ll learn:</b> ${p.learn}`+(basicsLeft?' <br><span style="color:var(--coral)">Tip: do the basics first — they teach the stitches used here.</span>':''),b1:{label:nx<0?'Replay from step 1':nx===0?'Start step 1':`Continue · ${p.steps[nx].name}`,fn:()=>startStep(id,Math.max(0,nx))},b2:{label:'Get the pattern',fn:()=>patternCard(id)}});},
+  return{enter(){const basicsLeft=BASICS.some((b,i)=>!state.done['b'+i]);ui({kicker:KICK(),title:p.title,msg:`${p.desc} <b>You’ll learn:</b> ${p.learn}`+(basicsLeft?' <br><span style="color:var(--coral)">Tip: do the basics first — they teach the stitches used here.</span>':''),extra:state.photo&&state.photo.id===id?`<div class="irl"><b>To match your photo:</b><ul style="margin:4px 0 0;padding-left:18px">${state.photo.notes.map(n=>`<li>${n}</li>`).join('')}</ul></div>`:'',b1:{label:nx<0?'Replay from step 1':nx===0?'Start step 1':`Continue · ${p.steps[nx].name}`,fn:()=>startStep(id,Math.max(0,nx))},b2:{label:'Get the pattern',fn:()=>patternCard(id)}});},
     bounds(){const rows=Math.ceil(n/mode);return mode===2?{x:20,y:5,w:630,h:rows*140+20}:{x:40,y:10,w:920,h:Math.max(400,rows*150+10)};},
     update(dt){t+=dt;place();ropes.forEach(r=>r.step());B.forEach((b,i)=>b.lift=lerp(b.lift,i===hov?1:0,.2));},
     hover(q){hov=B.findIndex(b=>Math.abs(q.x-b.x)<b.w/2&&Math.abs(q.y-b.y)<b.h/2);cv.style.cursor=hov>=0?'pointer':'default';},
@@ -604,10 +604,12 @@ function patternCard(id){const p=projOf(id),m=state.m;const fmt=q=>`${(+q.x).toF
   let h=`<span class="tag">Pattern · ${p.level}</span><h2>${p.name}</h2><p>Bust/chest ${m.bust} · Waist ${m.waist} · Hips ${m.hip} · Length ${m.length} · Arm ${m.arm} · Outseam ${m.outseam} cm</p>
   <div class="actions" style="margin:6px 0 4px"><button class="primary wide" id="mfs">Print it at real size</button><button id="msvg">Download SVG</button><button id="mp">Print this card</button></div>
   <p class="note">The real-size pattern tiles onto ordinary A4 or US Letter paper — tape the pages together and cut. Or draw it yourself on newspaper from the points below: cm <b>across</b> from a straight reference line (the fold for “on fold” pieces, centre front or back for the rest) and <b>down</b> from the top. Straight edges with a ruler, curves freehand.</p>`;
+  const adOpts=Object.entries(ADAPT).filter(([k,a])=>a.base===id),curA=(state.adapt||{})[id];
+  if(adOpts.length)h+=`<div class="irl" style="margin:12px 0"><b>Make it into something else:</b> <select id="adsel" style="font:600 13px inherit;font-family:inherit;padding:5px 8px;border-radius:9px;border:1px solid var(--line);background:#fff;margin-left:4px"><option value="">Keep it as a ${p.name.toLowerCase()}</option>${adOpts.map(([k,a])=>`<option value="${k}" ${curA===k?'selected':''}>${a.n}</option>`).join('')}</select><div id="adtx">${curA?adaptHTML(curA):''}</div></div>`;
   xpOf(id).forEach(pc=>{h+=`<h3>${pc.name} <small style="color:var(--muted);font-weight:500">· ${pc.cut}</small></h3>`;if(pc.noSA&&pc.edges.length===4&&pc.name!=='Back pocket'){h+=`<p>A rectangle ${r1(pc.bb.w)} × ${r1(pc.bb.h)} cm${pc.grain?', cut at 45° to the grain':''}.</p>`;return;}h+='<table>';pc.edges.forEach((e,i)=>{if(i===0)h+=`<tr><td>Start</td><td>${fmt(e.a)}</td></tr>`;h+=`<tr><td>${cap(e.name)}${e.kind==='curve'?' (curve)':''} to</td><td>${fmt(e.b)}</td></tr>`;});h+='</table>';});
   if(id==='pants')h+=`<p>Elastic: 2.5 cm wide, ${DR().pants.elastic} cm long.</p>`;
   h+=`<p>${p.cardNote||''} Seam allowance is included: 1.5 cm on seams, 1 cm on necklines and armholes, ${hemSA(id)} cm on hems.</p><h3>Order of work</h3><ol>${p.steps.filter(s=>!/^Wear/.test(s.name)).map(s=>`<li>${s.name} — ${s.sub}</li>`).join('')}</ol><p class="note">Simplified, untested drafts: sew a test version in cheap fabric first.</p><div class="actions"><button class="primary" id="mc">Close</button></div>`;
-  modal(h,M=>{M.querySelector('#mc').onclick=closeModal;M.querySelector('#mp').onclick=()=>window.print();M.querySelector('#mfs').onclick=()=>printModal(id);M.querySelector('#msvg').onclick=()=>downloadSVG(id);});}
+  modal(h,M=>{M.querySelector('#mc').onclick=closeModal;M.querySelector('#mp').onclick=()=>window.print();M.querySelector('#mfs').onclick=()=>printModal(id);M.querySelector('#msvg').onclick=()=>downloadSVG(id);const as=M.querySelector('#adsel');if(as)as.onchange=()=>{state.adapt=state.adapt||{};if(as.value)state.adapt[id]=as.value;else delete state.adapt[id];save();tick();M.querySelector('#adtx').innerHTML=as.value?adaptHTML(as.value):'';};});}
 
 // ───────────────────────── full-size pattern export (tiled print + SVG)
 const PAPER={a4:{n:'A4',w:21,h:29.7},letter:{n:'US Letter',w:21.59,h:27.94}},PM=1;
@@ -653,13 +655,14 @@ function mapSVG(id,L){let s=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="-.
   L.pls.forEach(o=>s+=`<path transform="translate(${f2(o.x-o.pc.bb.x0)} ${f2(o.y-o.pc.bb.y0)})" d="${pieceD(o.pc)}" fill="rgba(217,102,90,.18)" stroke="#333" stroke-width=".2"/>`);
   for(let r=0;r<L.rows;r++)for(let c=0;c<L.cols;c++){const lab=String.fromCharCode(65+c)+(r+1),u=used.has(lab);s+=`<text x="${f2(c*L.tw+L.tw/2)}" y="${f2(r*L.th+L.th/2)}" font-size="${f2(Math.min(L.tw,L.th)*.22)}" text-anchor="middle" dominant-baseline="middle" font-weight="700" fill="${u?'#d9665a':'#bbb'}" ${SF}>${u?lab:'—'}</text>`;}
   return s+'</svg>';}
-function printPattern(id,pk){const pp=PAPER[pk],tw=pp.w-2*PM,th=pp.h-2*PM,L=sheetLayout(id,tw,th),inner=sheetInner(id,L)+gridOverlay(L),p=projOf(id),m=state.m,N=L.tiles.length+1;
+function printPattern(id,pk){const pp=PAPER[pk],tw=pp.w-2*PM,th=pp.h-2*PM,L=sheetLayout(id,tw,th),inner=sheetInner(id,L)+gridOverlay(L),p=projOf(id),m=state.m,ak=(state.adapt||{})[id],N=L.tiles.length+1+(ak?1:0);
   const page=body=>`<div class="ppage" style="width:${pp.w}cm;height:${pp.h}cm">${body}</div>`;
   let h=page(`<div style="position:absolute;left:1.5cm;right:1.5cm;top:1.3cm;font-family:'Inter Tight',Arial,sans-serif;color:#1d2027;font-size:10pt;line-height:1.4"><div style="font-weight:700;font-size:8pt;letter-spacing:.06em;color:#d9665a">HAUTE · FULL-SIZE PATTERN</div><div style="font-size:22pt;font-weight:700;margin:2px 0">${esc(p.name)}</div><div>Drafted for bust ${m.bust} · waist ${m.waist} · hips ${m.hip} · length ${m.length} · arm ${m.arm} · outseam ${m.outseam} cm · ${pp.n}, ${N} pages</div>
     <div style="display:flex;gap:.8cm;align-items:flex-start;margin:.4cm 0"><div style="width:5cm;height:5cm;border:1px solid #000;box-sizing:border-box;display:grid;place-items:center;font-weight:700;flex:none">5 cm</div><ol style="margin:0;padding-left:1.1em"><li>Print at <b>100% / “Actual size”</b>, not “Fit to page”. Check this square measures exactly 5 cm (2 in) before printing the rest.</li><li>Cut off the white margin of every page along the grey line. Lay the pages out as in the map below, matching the half-circles, and tape them together.</li><li>Cut along the <b>solid</b> line. The <b>dashed</b> line is where you stitch (seam allowance is included).</li><li>Lay the grain arrows parallel to the selvedge, and “place on fold” edges on the fold.</li><li>Sew a quick test version in an old sheet first — these are simplified drafts.</li></ol></div>
     <div style="font-weight:700;margin-bottom:4px">Page map <span style="font-weight:400;color:#888">(blank pages are skipped)</span></div>${mapSVG(id,L)}
     <div style="margin-top:.35cm"><b>Pieces:</b> ${xpOf(id).map(pc=>`${esc(pc.name)} — ${esc(pc.cut)}`).join(' · ')}${id==='pants'?` · Elastic — 2.5 cm wide, ${DR().pants.elastic} cm`:''}</div><div style="margin-top:.2cm;color:#555">${esc(p.cardNote||'')}</div></div><div class="pfoot">${esc(p.name)} · page 1 of ${N} · bebop-cow.github.io/haute</div>`);
-  L.tiles.forEach((t,i)=>{h+=page(`<svg xmlns="http://www.w3.org/2000/svg" style="position:absolute;left:${PM}cm;top:${PM}cm;width:${f2(tw)}cm;height:${f2(th)}cm" viewBox="${f2(t.c*tw)} ${f2(t.r*th)} ${f2(tw)} ${f2(th)}">${inner}</svg><div class="pfoot">${esc(p.name)} · page <b>${t.lab}</b> · ${i+2} of ${N} · trim along the grey line, then tape to the neighbouring pages</div>`);});
+  if(ak)h+=page(`<div style="position:absolute;left:1.5cm;right:1.5cm;top:1.3cm;font-family:'Inter Tight',Arial,sans-serif;color:#1d2027;font-size:10.5pt;line-height:1.45"><div style="font-weight:700;font-size:8pt;letter-spacing:.06em;color:#d9665a">HAUTE · ADAPTATION GUIDE</div><div style="font-size:20pt;font-weight:700;margin:2px 0 6px">From ${esc(p.name.toLowerCase())} to ${esc(ADAPT[ak].n)}</div>${adaptHTML(ak,false)}<p style="color:#555">Make the changes on the paper pattern before you cut. Draw new lines in a different colour, and keep the 1.5 cm seam allowance along every new edge.</p></div><div class="pfoot">${esc(p.name)} → ${esc(ADAPT[ak].n)} · page 2 of ${N}</div>`);
+  const off=ak?3:2;L.tiles.forEach((t,i)=>{h+=page(`<svg xmlns="http://www.w3.org/2000/svg" style="position:absolute;left:${PM}cm;top:${PM}cm;width:${f2(tw)}cm;height:${f2(th)}cm" viewBox="${f2(t.c*tw)} ${f2(t.r*th)} ${f2(tw)} ${f2(th)}">${inner}</svg><div class="pfoot">${esc(p.name)} · page <b>${t.lab}</b> · ${i+off} of ${N} · trim along the grey line, then tape to the neighbouring pages</div>`);});
   $('pp').innerHTML=h;$('ppstyle').textContent=`@page{size:${pp.w}cm ${pp.h}cm;margin:0}`;document.body.classList.add('pp');setTimeout(()=>window.print(),120);}
 addEventListener('afterprint',()=>{if(!document.body.classList.contains('pp'))return;document.body.classList.remove('pp');$('pp').innerHTML='';$('ppstyle').textContent='';});
 function fullSVG(id){const L=sheetLayout(id,90,1e4);return`<svg xmlns="http://www.w3.org/2000/svg" width="${f2(L.SW)}cm" height="${f2(L.H)}cm" viewBox="0 0 ${f2(L.SW)} ${f2(L.H)}"><rect width="${f2(L.SW)}" height="${f2(L.H)}" fill="#fff"/>${sheetInner(id,L)}</svg>`;}
@@ -668,9 +671,111 @@ function printModal(id){const p=projOf(id);let pk=state.paper||(/^en-(US|CA)|^es
   modal(`<span class="tag">Real-size pattern</span><h2>Print your ${esc(p.name.toLowerCase())}</h2><p>Drafted from your measurements and tiled onto ordinary paper. Use the print dialog’s <b>Save as PDF</b> to keep a copy.</p><div class="seg" id="ps"><button data-p="a4">A4</button><button data-p="letter">US Letter</button></div><p id="pcount" style="margin-top:10px"></p>
     <ol><li>In the print dialog, set the scale to <b>100%</b> / “Actual size” — not “Fit to page”.</li><li>Check the 5 cm test square on page 1 before printing the rest.</li><li>Trim each page along the grey line and tape them together, matching the half-circles and the map on page 1.</li><li>Cut on the <b>solid</b> line; the <b>dashed</b> line is the stitching line.</li><li>Sew a test version in an old sheet before cutting good fabric.</li></ol>
     <p class="note">Copy shops and print services can print the SVG file in one piece on large-format (A0 / 36″) paper.</p><div class="actions"><button id="pb">Back</button><button id="psvg">Download SVG</button><button class="primary" id="pgo">Print pages</button></div>`,M=>{
-    const paint=()=>{M.querySelectorAll('#ps button').forEach(b=>b.classList.toggle('on',b.dataset.p===pk));const pp=PAPER[pk],L=sheetLayout(id,pp.w-2*PM,pp.h-2*PM);M.querySelector('#pcount').innerHTML=`<b>${L.tiles.length+1} pages</b> of ${pp.n} (1 instruction page + ${L.tiles.length} pattern pages).`;};
+    const paint=()=>{M.querySelectorAll('#ps button').forEach(b=>b.classList.toggle('on',b.dataset.p===pk));const pp=PAPER[pk],L=sheetLayout(id,pp.w-2*PM,pp.h-2*PM);const ak=(state.adapt||{})[id];M.querySelector('#pcount').innerHTML=`<b>${L.tiles.length+1+(ak?1:0)} pages</b> of ${pp.n} (1 instruction page${ak?` + 1 page on turning it into ${aN(ADAPT[ak].n.toLowerCase())}`:''} + ${L.tiles.length} pattern pages).`;};
     M.querySelectorAll('#ps button').forEach(b=>b.onclick=()=>{pk=b.dataset.p;state.paper=pk;save();tick();paint();});paint();
     M.querySelector('#pb').onclick=()=>patternCard(id);M.querySelector('#psvg').onclick=()=>downloadSVG(id);M.querySelector('#pgo').onclick=()=>printPattern(id,pk);});}
+
+// ───────────────────────── outfit from a photo (on-device CLIP, no server)
+const TJS='https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.3.1/+esm',CLIPM='Xenova/clip-vit-base-patch32';
+let CLIP=null;
+const nrm=a=>{let s=0;for(const v of a)s+=v*v;s=Math.sqrt(s)||1;return a.map(v=>v/s);};
+const PQ={type:[{k:'dress',l:'Dress',p:['a photo of a woman wearing a dress','a photo of a one-piece dress','a photo of a person in a dress']},{k:'skirt',l:'Skirt',p:['a photo of a person wearing a skirt','a photo of a skirt and a top','a photo of a skirt']},{k:'trousers',l:'Trousers',p:['a photo of a person wearing trousers','a photo of a person wearing pants','a photo of trousers']},{k:'jeans',l:'Jeans',p:['a photo of a person wearing blue jeans','a photo of denim jeans']},{k:'shirt',l:'Shirt',p:['a photo of a person wearing a button-up shirt','a photo of a collared shirt with buttons']},{k:'top',l:'Top / tee',p:['a photo of a person wearing a t-shirt','a photo of a loose top']},{k:'suit',l:'Suit / blazer',p:['a photo of a person wearing a suit','a photo of a blazer jacket']}],
+  dressShape:[{k:'fitted',l:'Fitted',p:['a photo of a fitted sheath dress','a photo of a tight bodycon dress']},{k:'shift',l:'Loose & straight',p:['a photo of a loose straight shift dress','a photo of a simple loose dress']},{k:'full',l:'Full skirt',p:['a photo of a dress with a fitted bodice and a full gathered skirt','a photo of a fit and flare sundress']}],
+  skirtShape:[{k:'pencil',l:'Pencil',p:['a photo of a tight straight pencil skirt','a photo of a slim fitted pencil skirt']},{k:'aline',l:'A-line',p:['a photo of an A-line skirt','a photo of a skirt that flares out gently from the hips']},{k:'full',l:'Full / gathered',p:['a photo of a full gathered skirt','a photo of a full circle skater skirt']}],
+  sleeves:[{k:'none',l:'Sleeveless',p:['a photo of a sleeveless garment','a photo of a dress with thin spaghetti straps','a photo of bare shoulders and arms']},{k:'short',l:'Short',p:['a photo of a garment with short sleeves']},{k:'long',l:'Long',p:['a photo of a garment with long sleeves']}],
+  length:[{k:'mini',l:'Mini'},{k:'knee',l:'Knee'},{k:'midi',l:'Midi'},{k:'maxi',l:'Maxi'}]};
+async function clipLoad(onProg){if(CLIP)return CLIP;const T=await import(TJS);const files={};const cb=e=>{if(e.status==='progress'&&e.total){files[e.file]=[e.loaded,e.total];let a=0,b=0;for(const k in files){a+=files[k][0];b+=files[k][1];}onProg&&onProg(a/b,b);}};
+  const [tok,proc,vis,txt]=await Promise.all([T.AutoTokenizer.from_pretrained(CLIPM,{progress_callback:cb}),T.AutoProcessor.from_pretrained(CLIPM,{progress_callback:cb}),T.CLIPVisionModelWithProjection.from_pretrained(CLIPM,{dtype:'q8',progress_callback:cb}),T.CLIPTextModelWithProjection.from_pretrained(CLIPM,{dtype:'q8',progress_callback:cb})]);
+  const E={};for(const q in PQ){if(!PQ[q][0].p)continue;const flat=[],idx=[];PQ[q].forEach((c,ci)=>c.p.forEach(p=>{flat.push(p);idx.push(ci);}));const {text_embeds:e}=await txt(tok(flat,{padding:true,truncation:true}));const d=e.dims[1],acc=PQ[q].map(()=>new Array(d).fill(0));flat.forEach((_,i)=>nrm(Array.from(e.data.slice(i*d,(i+1)*d))).forEach((x,j)=>acc[idx[i]][j]+=x));E[q]=acc.map(nrm);}
+  CLIP={T,proc,vis,E};return CLIP;}
+async function clipRead(blob){const {T,proc,vis,E}=CLIP;const img=await T.RawImage.fromBlob(blob);const {image_embeds}=await vis(await proc(img));const ie=nrm(Array.from(image_embeds.data));const out={};
+  for(const q in E){const lg=E[q].map(t=>100*t.reduce((s,v,i)=>s+v*ie[i],0)),m=Math.max(...lg),ex=lg.map(v=>Math.exp(v-m)),z=ex.reduce((a,b)=>a+b);out[q]=PQ[q].map((c,i)=>({k:c.k,p:ex[i]/z})).sort((a,b)=>b.p-a.p);}return out;}
+function photoPlan(c){if(c.style&&ADAPT[c.style]){const a=ADAPT[c.style],b=projOf(a.base);return{id:a.base,style:c.style,notes:[`${a.intro}`,`Sew the <b>${b.name.toLowerCase()}</b> step by step, then follow <b>“Make it into: ${a.n}”</b> on the pattern card — it’s printed with your full-size pattern too.`]};}
+  const m=state.m,t=c.type,notes=[];let id;const wy=r1(m.bust/8+29),fromWaist={mini:.4,knee:.55,midi:.75,maxi:.95}[c.length]*m.outseam;
+  const len=(have,want,what)=>{const d=r1(want-have);if(Math.abs(d)>=3)notes.push(`${d>0?'Lengthen':'Shorten'} the ${what} by <b>${Math.abs(d)} cm</b> at the hem for a ${c.length} length (redraw the hem line parallel to the old one).`);};
+  const sleeveNote=()=>{if(c.sleeves==='short')notes.push('Add short sleeves: cut the <b>shirt sleeve</b> pattern off 18–22 cm below the top of the cap, and set it in like the shirt’s “Set the sleeves” step.');else if(c.sleeves==='long')notes.push('Add long sleeves: borrow the <b>shirt sleeve</b> pattern and set it in like the shirt’s “Set the sleeves” step.');};
+  if(t==='dress'){id=c.dressShape==='fitted'?'darted':c.dressShape==='full'?'sundress':'shift';const L=id==='sundress'?m.length:m.length;len(L,wy+fromWaist,'dress');if(id==='sundress'){if(c.sleeves!=='none')sleeveNote();}else if(c.sleeves!=='none')sleeveNote();}
+  else if(t==='skirt'){if(c.skirtShape==='pencil'){id='pencil';len(r1(m.outseam*.55),fromWaist,'skirt');}else{id='aline';len(r1(m.outseam*.6),fromWaist,'skirt');if(c.skirtShape==='full')notes.push(`For a fuller, gathered skirt, replace the A-line front and back with two rectangles, each <b>${r1(m.waist*.9+3)} cm</b> wide, and gather them onto the waistband (see the sundress “Gather & join” step).`);}}
+  else if(t==='trousers'){id='pants';notes.push('For a slimmer leg, take the same amount off the inseam and outseam at the hem, tapering to nothing at the crotch.');}
+  else if(t==='jeans')id='jeans';else if(t==='suit')id='suit';else if(t==='shirt'){id='shirt';if(c.sleeves==='short')notes.push('For short sleeves, cut the sleeve pattern off 22–25 cm below the top of the cap and hem it.');}
+  else{id='top';if(c.sleeves==='long')notes.push('For long sleeves, cut the sleeves off at the shoulder edge and set in the <b>shirt sleeve</b> instead.');else if(c.sleeves==='none')notes.push('For a sleeveless top, trim the cut-on sleeve back to the side seam with a smooth armhole curve.');}
+  if(!notes.length)notes.push('The pattern already matches this style — follow the project as it is.');return{id,notes};}
+// adaptation guides: base pattern → traditional / cultural garment (numbers from the user's measurements)
+const ADAPT={
+ abaya:{n:'Abaya',base:'shift',intro:'A long, loose robe. Start from the shift dress — it already has the right easy fit.',steps:(m,v)=>[
+  `<b>Length:</b> lengthen the front and back by <b>${v.toAnkle(m.length+3)} cm</b> so the hem reaches the ankle. Continue the side seams straight down, then flare them out 6 cm at the hem so you can walk freely.`,
+  '<b>Neckline:</b> raise the front neckline to 6 cm deep for a high, round neck (the back stays 3 cm).',
+  `<b>Open front (optional):</b> instead of cutting the front on the fold, add 4 cm past the centre-front line and cut two fronts. Fold the 4 cm back inside as a facing. Close with snaps or hooks, or wear it open.`,
+  `<b>Sleeves:</b> print the button-up shirt pattern and use its sleeve. Lengthen it 3 cm, and draw the underarm seams straight down from the widest point so the cuff is as wide as the top — a wide, straight sleeve about <b>${r1(m.bust*.19+2.5)} cm</b> across. Lower the dress armhole 2 cm, then set the sleeves like the shirt’s “Set the sleeves” step.`,
+  '<b>Finishing:</b> side slits of 20–25 cm at the hem are optional. Drapey, opaque fabrics work best: crepe, nida, georgette (lined) or viscose.',
+  `<b>Fabric:</b> about <b>${r1((m.length+v.toAnkle(m.length+3)+10)*2/100+.6)} m</b> of 140 cm wide fabric.`]},
+ kaftan:{n:'Kaftan',base:'top',intro:'A long, flowing robe with wide sleeves. Start from the boxy top — its sleeves are already cut in one with the body.',steps:(m,v)=>[
+  `<b>Length:</b> lengthen front and back by <b>${v.toAnkle(r1(m.length*.62))} cm</b> to the ankle, continuing the side seams straight down.`,
+  '<b>Wide sleeves:</b> extend the sleeve hem edge down by 10–15 cm and redraw the underarm as a long, smooth curve that meets the side seam at hip level. This gives the soft “batwing” drape.',
+  '<b>Neckline:</b> cut a 12–15 cm slit down the centre front (or a deep V) and finish it with a facing or bias binding.',
+  '<b>Finishing:</b> side slits of about 30 cm. Light, drapey fabrics — viscose, cotton voile, silk — hang best. Trim the neckline with braid or embroidery if you like.']},
+ thobe:{n:'Thobe / jalabiya',base:'shirt',intro:'An ankle-length robe with a collar and a short button opening. Start from the button-up shirt.',steps:(m,v)=>[
+  `<b>Length:</b> lengthen the front and back by <b>${v.toAnkle(r1(m.length*.78))} cm</b> to the ankle. Add 4 cm of flare at each side seam at the hem.`,
+  '<b>Front opening:</b> keep the button opening only at the top 25–30 cm. Below that, overlap the two fronts along the centre-front line and stitch them together.',
+  '<b>Collar:</b> use the collar band from the pattern as a stand collar (no fold-down collar).',
+  '<b>Sleeves:</b> use the shirt sleeve as it is, 3 cm longer, with a cuff or a plain hem.',
+  '<b>Pockets:</b> add in-seam pockets at hip level in the side seams. Crisp cotton or cotton blends are traditional.']},
+ kurta:{n:'Kurta',base:'shirt',intro:'A long tunic with side slits and a band collar. Start from the button-up shirt.',steps:(m,v)=>[
+  `<b>Length:</b> lengthen front and back by <b>${v.toKnee(r1(m.length*.78))} cm</b> to just above the knee (or to your favourite length).`,
+  '<b>Side slits:</b> stop the side seams at the hip and finish the open edges with a narrow double fold — slits of about 20 cm.',
+  '<b>Opening:</b> keep the button placket only at the top 25 cm and stitch the centre front closed below it.',
+  '<b>Collar:</b> sew the collar band as a mandarin collar (no fold-down collar) — or skip it and bind a round neck.',
+  '<b>Sleeves:</b> straight and long, with a plain hem. Pair it with the loose trousers adapted into a salwar.']},
+ salwar:{n:'Salwar',base:'pants',intro:'Full, comfortable trousers gathered into narrow cuffs. Start from the loose trousers.',steps:(m,v)=>[
+  '<b>Fullness:</b> add 10–15 cm to both the inseam and outseam edges of each leg at the hip line, keeping the extra all the way down.',
+  '<b>Crotch:</b> lower the crotch 5–8 cm for the traditional relaxed fit.',
+  `<b>Cuffs:</b> gather each leg hem into a cuff band about <b>${r1(m.hip*.26+5)} cm</b> long and 8 cm wide (folded in half) — gather it like the sundress skirt.`,
+  '<b>Waist:</b> make the casing as in the project and thread a drawstring (or elastic). Soft cotton or lawn is comfortable for everyday wear.']},
+ kimono:{n:'Kimono-style robe',base:'top',intro:'A wrap-front robe with square sleeves. Start from the boxy top. (A traditional kimono is cut from narrow rectangles — this is a simplified robe.)',steps:(m,v)=>[
+  `<b>Length:</b> lengthen to the knee (about <b>${v.toKnee(r1(m.length*.62))} cm</b>) or the ankle.`,
+  '<b>Square sleeves:</b> extend the sleeve hem edge straight down until each sleeve is 35–45 cm deep, then sew only the top part of the sleeve opening so the bottom hangs free.',
+  '<b>Open front:</b> cut two fronts instead of one on the fold, adding a 10 cm overlap at the centre front.',
+  `<b>Collar band:</b> a strip 10 cm wide, folded in half, running from one front hem, round the back neck, to the other front hem (about <b>${r1(2*(m.length*.62)+30)} cm</b> long).`,
+  `<b>Sash:</b> a strip 15 × ${r1(m.waist*2+60)} cm, folded in half lengthwise.`]},
+ qipao:{n:'Qipao / cheongsam',base:'darted',intro:'A fitted dress with a stand collar and side slits. Start from the fitted dress.',steps:(m,v)=>[
+  '<b>Neckline:</b> raise it to the base of the neck — about 2 cm deep at the front and 1 cm at the back.',
+  `<b>Mandarin collar:</b> cut 2 strips <b>${r1(m.bust*.42)} × 5.5 cm</b> (one interfaced), sewn together and stitched to the neckline — about 4 cm high when finished.`,
+  '<b>Opening:</b> the classic curved front opening is an advanced technique — put a zip in the side or centre back instead, using the Zips lesson.',
+  '<b>Slits:</b> leave 15–30 cm open at each side seam above the hem.',
+  '<b>Finishing:</b> cap sleeves are optional (the shirt sleeve cut 8 cm below the cap). Add piping and frog fastenings for the traditional look. Silk brocade or satin are classic; cotton works for everyday wear.']},
+ dashiki:{n:'Dashiki',base:'top',intro:'A loose, hip-length tunic with a decorated neckline. Start from the boxy top — it’s already very close.',steps:(m,v)=>[
+  '<b>Length:</b> the boxy top is about the right length; add up to 10 cm for a longer tunic.',
+  '<b>Neckline:</b> cut a V or keyhole about 12 cm deep at the front and finish it with a facing cut from the same pattern.',
+  '<b>Decoration:</b> the neckline is traditionally framed by an embroidered or printed panel — topstitch braid or a contrast band around it.',
+  '<b>Finishing:</b> side slits of about 10 cm. Bold printed cotton (wax print) is classic.']},
+ sari:{n:'Sari (blouse & petticoat)',base:'darted',intro:'The sari itself is 5–6 m of unstitched cloth — you only hem it. The blouse (choli) and petticoat are sewn. Start from the fitted dress for the blouse.',steps:(m,v)=>[
+  '<b>The sari:</b> hem the raw ends with a narrow double fold (see “Hem it”). The selvedges are usually finished already.',
+  `<b>Blouse:</b> use the fitted dress bodice, cut off about <b>${r1(m.bust/8+21)} cm</b> below the shoulder (just under the bust). Keep the darts, scoop the neckline as you like, and add short sleeves (the shirt sleeve cut 15 cm below the cap).`,
+  '<b>Blouse opening:</b> a front or back opening with hooks and eyes, or a zip from the Zips lesson.',
+  `<b>Petticoat:</b> make the A-line skirt ankle-length (about <b>${r1(m.outseam*.95)} cm</b>) with a drawstring waist instead of a waistband and zip.`]}};
+const aN=w=>(/^[aeiou]/i.test(w)?'an ':'a ')+w;
+const adaptVals=m=>{const wy=r1(m.bust/8+29);return{toAnkle:have=>Math.max(0,r1(wy+m.outseam*.95+3-have)),toKnee:have=>Math.max(0,r1(wy+m.outseam*.55+3-have))};};
+function adaptHTML(key,head=true){const a=ADAPT[key];if(!a)return'';return`${head?`<h3>Make it into: ${a.n}</h3>`:''}<p>${a.intro}</p><ol>${a.steps(state.m,adaptVals(state.m)).map(t=>`<li>${t}</li>`).join('')}</ol><p class="note">Styles vary by region and community — adjust the length, neckline and sleeves to how it’s worn where you are.</p>`;}
+function photoModal(){let url=null,blob=null,res=null,c=null;
+  const draw=(M,stage,extra='')=>{const p=c&&photoPlan(c),pj=p&&projOf(p.id);
+    const chips=(q,lab)=>`<div style="margin:8px 0 2px;font-size:12.5px;color:var(--muted)">${lab}</div><div class="seg" style="flex-wrap:wrap">${PQ[q].map(o=>`<button data-q="${q}" data-k="${o.k}" class="${c[q]===o.k?'on':''}">${o.l}${res&&res[q]&&res[q][0].k===o.k?` <span style="color:var(--coral)">${Math.round(res[q][0].p*100)}%</span>`:''}</button>`).join('')}</div>`;
+    M.querySelector('.card').innerHTML=`<span class="tag">From a photo · beta</span><h2>Make an outfit you love</h2>
+      ${url?`<img src="${url}" alt="Your photo" style="width:100%;max-height:240px;object-fit:contain;border-radius:14px;background:#efede9;margin:8px 0">`:'<p>Upload or take a photo of a garment you’d like to make. The AI works out what it is and picks the closest project, with tips to adapt it.</p>'}
+      ${stage==='busy'?`<p id="pst">${extra}</p>`:''}
+      ${stage==='done'?`${res&&res.type[0].p<.45?'<p style="color:var(--coral)">Not totally sure about this one — check the choices below.</p>':''}${chips('type','Garment')}${c.type==='dress'?chips('dressShape','Shape'):''}${c.type==='skirt'?chips('skirtShape','Shape'):''}${['dress','top','shirt'].includes(c.type)?chips('sleeves','Sleeves'):''}${['dress','skirt'].includes(c.type)&&!c.style?chips('length','Length (pick it — photos are hard to judge)'):''}
+        <div style="margin:12px 0 2px;font-size:12.5px;color:var(--muted)">Traditional or cultural garment? <span style="color:var(--ink)">Pick it here — the AI can’t name these reliably.</span></div><select id="psty" style="width:100%;font:600 14px inherit;font-family:inherit;padding:9px 10px;border-radius:12px;border:1px solid var(--line);background:#fff"><option value="">No — a general style</option>${Object.entries(ADAPT).map(([k,a])=>`<option value="${k}" ${c.style===k?'selected':''}>${a.n}</option>`).join('')}</select>
+        <h3>Closest project: ${pj.name} <small style="color:var(--muted);font-weight:500">· ${pj.level}</small></h3><ul>${p.notes.map(n=>`<li>${n}</li>`).join('')}</ul>`:''}
+      <p class="note">The AI runs inside your browser — your photo is never uploaded. The first time, it downloads a ~150 MB model, which is then saved for next time.</p>
+      <div class="actions"><label class="pill" style="flex:1;height:44px;border-radius:13px;border:1px solid var(--line);display:grid;place-items:center;font-weight:600;cursor:pointer">${url?'Try another photo':'Choose a photo'}<input type="file" accept="image/*" id="pf" hidden></label>${stage==='done'?`<button class="primary" id="pgo">Start the ${pj.name.toLowerCase()} →</button>`:`<button id="pcl">Close</button>`}</div>`;
+    M.querySelector('#pf').onchange=e=>{const f=e.target.files&&e.target.files[0];if(f)run(M,f);};
+    const cl=M.querySelector('#pcl');if(cl)cl.onclick=closeModal;
+    M.querySelectorAll('[data-q]').forEach(b=>b.onclick=()=>{c[b.dataset.q]=b.dataset.k;tick();draw(M,'done');});const sel=M.querySelector('#psty');if(sel)sel.onchange=()=>{c.style=sel.value||null;tick();draw(M,'done');};
+    const go=M.querySelector('#pgo');if(go)go.onclick=()=>{state.photo={id:p.id,notes:p.notes};state.adapt=state.adapt||{};if(p.style)state.adapt[p.id]=p.style;save();openProject(p.id);};};
+  async function run(M,f){if(url)URL.revokeObjectURL(url);url=URL.createObjectURL(f);blob=f;c=null;res=null;draw(M,'busy',CLIP?'Looking at the outfit…':'Loading the AI model…');
+    try{await clipLoad((fr,tot)=>{const el=M.querySelector('#pst');if(el)el.textContent=`Downloading the AI model… ${Math.round(fr*100)}% of ${Math.round(tot/1e6)} MB`;});const el=M.querySelector('#pst');if(el)el.textContent='Looking at the outfit…';
+      res=await clipRead(blob);c={type:res.type[0].k,dressShape:res.dressShape[0].k,skirtShape:res.skirtShape[0].k,sleeves:res.sleeves[0].k,length:'knee'};pop();draw(M,'done');}
+    catch(e){console.error(e);draw(M,'busy',`Sorry — the AI couldn’t run here (${esc(e.message||e)}). Try a newer browser, or pick a project yourself.`);}}
+  modal('',M=>draw(M,'idle'));}
 
 // ═════════════════════════ PROJECT STEPS ═════════════════════════
 // ───────── pattern & grain
@@ -1064,7 +1169,7 @@ function garmentDetails(id,M,s){const D=DR()[id];const st=(pts,col,w=1.3,dash=[4
   if(id==='suit'){[1,-1].forEach(g=>{st([P(g*-2.5,D.bp),P(g*7,1.5)],dk,1.2,[1,0]);st([P(g*-9,D.wy+10),P(g*-19,D.wy+9)],dk,1.4,[1,0]);});btn(P(0,D.bp+1),1.2,'#3b2f2a');btn(P(0,D.bp+11),1.2,'#3b2f2a');
     const tr=D.trouser,dx=D.front.bb.x1+tr.hipW+18;[1,-1].forEach(g=>st([P(dx+g*tr.cx,12),P(dx+g*tr.cx,tr.O+4)],lt,1.1,[1,0]));}}
 function FinalScene(id){let t=0;const p=projOf(id),skirt=SKIRTS.includes(id),dress=DRESSES.includes(id)||skirt,yo=skirt?42:10.2;
-  return{enter(){burst(500,200,60);chime();state.done[keyOf(id,curI)]=true;save();ui({kicker:KICK(),title:p.doneTitle,msg:p.doneMsg,extra:swatches(id),b1:{label:'Get the pattern',fn:()=>patternCard(id)},b2:{label:'All projects',fn:home}});},
+  return{enter(){burst(500,200,60);chime();state.done[keyOf(id,curI)]=true;save();const ak=(state.adapt||{})[id];ui({kicker:KICK(),title:p.doneTitle,msg:p.doneMsg+(ak?` <br><b style="color:var(--coral)">Next: turn it into ${aN(ADAPT[ak].n.toLowerCase())}</b> — open “Get the pattern” for the steps.`:''),extra:swatches(id),b1:{label:'Get the pattern',fn:()=>patternCard(id)},b2:{label:'All projects',fn:home}});},
     bounds(){return dress?(portrait?{x:330,y:10,w:340,h:630}:{x:50,y:0,w:900,h:H}):{x:40,y:10,w:920,h:620};},
     update(dt){t+=dt;},
     draw(){const hex=fabOf(id);
@@ -1100,7 +1205,7 @@ function render(dt){
   ctx.setTransform(DPR*view.s,0,0,DPR*view.s,DPR*view.ox,DPR*view.oy);
   if(scene){ctx.save();scene.draw();ctx.restore();}drawFx();
   if(fade>0){fade=Math.max(0,fade-dt*3.5);ctx.setTransform(1,0,0,1,0,0);ctx.fillStyle=`rgba(233,231,227,${fade})`;ctx.fillRect(0,0,cv.width,cv.height);}}
-window.__haute={get scene(){return scene},startStep,openProject,home,DR,view,state,sheetLayout,fullSVG,printPattern,patternCard,printModal,xpOf,adv(sec){for(let i=0;i<sec*60;i++){scene&&scene.update&&scene.update(1/60);updFx(1/60);}fade=0;layoutStage();render(0);}};
+window.__haute={ADAPT,adaptHTML,photoModal,clipLoad,clipRead,photoPlan,get scene(){return scene},startStep,openProject,home,DR,view,state,sheetLayout,fullSVG,printPattern,patternCard,printModal,xpOf,adv(sec){for(let i=0;i<sec*60;i++){scene&&scene.update&&scene.update(1/60);updFx(1/60);}fade=0;layoutStage();render(0);}};
 home();requestAnimationFrame(frame);
 })();
 </script>
