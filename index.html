@@ -709,7 +709,7 @@ function CutScene(id,key){const pc=DR()[id][key],F=fabricLayout(pc),k=F.k,E=pc.e
   const userPts=()=>{if(!end)return[];const m=midPt();const cc=P(2*m.x-(start.x+end.x)/2,2*m.y-(start.y+end.y)/2);return sampleQuad(start,cc,end,26);};
   function uiEdge(m){const e=E[ei];ui({kicker:KICK(),title:`Cut the <em>${e.name}</em>.`,msg:m||(e.kind==='curve'?'Curves: place the end point first, then drag the <b>middle handle</b> to bend your cut onto the chalk line. Press <b>Cut</b> when it matches.':(ei===0?'Both layers are cut at once. Drag from the glowing point to where the chalk line ends, adjust the handles, then press <b>Cut</b>.':'Drag from the glowing point along the chalk line, then press <b>Cut</b>.')),b1:{label:'Cut',disabled:!end,fn:doCut},b2:{label:'Restart',fn:replay}});}
   function evaluate(){const up=userPts(),tg=tgt(E[ei]);let s=0;up.forEach(p=>s+=distPoly(p,tg));return{mean:s/up.length/k,endErr:dist(end,tg[tg.length-1])/k,up};}
-  function doCut(){if(!end||cutter)return;const ev=evaluate();if(ev.endErr>1.3||ev.mean>.75){bad();setMsg(`Not lined up yet — about <b>${Math.max(ev.mean,ev.endErr).toFixed(1)} cm</b> off. Move the handles onto the chalk line. Measure twice, cut once!`);return;}
+  function doCut(){if(!end||cutter)return;const ev=evaluate();if(ev.endErr>1.3){bad();const nx=E[ei+1];setMsg(`Your cut doesn’t stop at the end of the <b>${E[ei].name}</b> — it’s <b>${ev.endErr.toFixed(1)} cm</b> from the glowing end dot.${nx?` The ${nx.name} is cut next, as a separate step.`:''}`);return;}if(ev.mean>.75){bad();setMsg(E[ei].kind==='curve'?`The ends are right, but the cut is about <b>${ev.mean.toFixed(1)} cm</b> off the curve. Drag the <b>middle handle</b> to bend it onto the chalk line.`:`About <b>${ev.mean.toFixed(1)} cm</b> off the chalk line. Move the handles onto it. Measure twice, cut once!`);return;}
     const up=ev.up;if(ei===E.length-1)up[up.length-1]=pc.onFold?P(F.fx,up[up.length-1].y):P(first.x,first.y);
     b1On(false);cutter=new Cutter(up,()=>{cutter=null;cuts.push(up);float(up[up.length-1].x+20,up[up.length-1].y-20,`${Math.round(ev.mean*10)} mm off ${ev.mean<.25?'★★★':ev.mean<.5?'★★☆':'★☆☆'}`,ev.mean<.5?'#2f7d55':CORAL);start=up[up.length-1];end=null;mid=null;midMoved=false;ei++;if(ei<E.length)uiEdge();else finish();},null,300);}
   function piecePoly(){const pts=[first];cuts.forEach(c=>c.forEach((p,i)=>{if(i)pts.push(p);}));if(!pc.onFold)pts.pop();return pts;}
@@ -725,7 +725,8 @@ function CutScene(id,key){const pc=DR()[id][key],F=fabricLayout(pc),k=F.k,E=pc.e
     up(){if(drag){drag=null;b1On(!!end&&!cutter);}},
     hover(p){cv.style.cursor=end&&(dist(p,end)<GR(18)||dist(p,midPt())<GR(16))?'grab':'crosshair';},
     draw(){const hex=fabOf(id),r=F.rect;
-      if(phase==='cut'){drawFolded(F,hex);E.forEach((e,i)=>{if(i>=ei)chalk(tgt(e),2,chalkCol(hex));});cuts.forEach(c=>slit(c));if(cutter)cutter.drawSlit();
+      if(phase==='cut'){drawFolded(F,hex);E.forEach((e,i)=>{if(i>ei){ctx.save();ctx.globalAlpha=.35;chalk(tgt(e),2,chalkCol(hex));ctx.restore();}else if(i===ei)chalk(tgt(e),2.6,chalkCol(hex));});cuts.forEach(c=>{slit(c);ctx.save();ctx.globalAlpha=.5;path(c,false);ctx.strokeStyle=lum(hex)>.5?'rgba(0,0,0,.35)':'rgba(255,255,255,.4)';ctx.lineWidth=1;ctx.stroke();ctx.restore();});if(cutter)cutter.drawSlit();
+        if(!cutter&&ei<E.length){const te=tgt(E[ei]),tp=te[te.length-1];ctx.save();ctx.globalAlpha=.55+.35*Math.sin(t*4);dot(tp,5,'#fff',CORAL,2);ctx.restore();}
         if(!cutter){ring(start,t);if(end){dashed(userPts());if(E[ei].kind==='curve'||midMoved)midHandle(midPt());handle(start,false);handle(end,drag==='end');}}
         if(cutter)cutter.drawTool();return;}
       const pp=piecePoly();
